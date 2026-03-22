@@ -1,137 +1,98 @@
-import { Server, Cpu, HardDrive, Activity, Clock, Wifi, Tag, Coffee, Music, Plug, Disc, Hourglass } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+"use client";
+import {
+    Server, Cpu, HardDrive, Activity, Clock,
+    Wifi, Tag, Coffee, Music, Plug, Disc, Hourglass,
+    ChevronRight, ExternalLink
+} from "lucide-react";
 
 export function NodeCard({ node, onClick, minimal = false }) {
-    const isOnline = node.isConnected;
+    const online = node.isConnected;
 
     return (
-        <Card
-            className={`group bg-card border-border text-card-foreground transition-all hover:bg-muted/50 hover:border-blue-500 cursor-pointer overflow-hidden relative ${minimal ? 'h-auto' : ''}`}
+        <div
             onClick={onClick ? () => onClick(node) : undefined}
+            className={`
+                relative group overflow-hidden transition-all duration-300
+                bg-white/[0.02] border border-white/[0.08] hover:border-white/20
+                hover:bg-white/[0.04] p-6 cursor-pointer
+                ${minimal ? 'h-32' : 'h-auto'}
+            `}
         >
-            <CardHeader className={`${minimal ? 'pb-3 pt-3 px-3' : 'pb-2 pt-3 px-4'} space-y-0`}>
-                <div className="flex justify-between items-center mb-1.5">
-                    <Badge
-                        variant="outline"
-                        className={`${isOnline ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" : "border-red-500/50 text-red-500 bg-red-500/10"} px-2.5 py-0.5 text-xs h-6`}
-                    >
-                        <div className={`w-1.5 h-1.5 rounded-full mr-2 ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
-                        {isOnline ? "Online" : "Offline"}
-                    </Badge>
+            {/* Status accent line */}
+            <div className={`absolute top-0 left-0 bottom-0 w-[2px] transition-all duration-300 ${online ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-red-500 opacity-50'}`} />
 
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>Hosted by</span>
-                        <span className="text-foreground font-semibold">
-                            {node.authorId || 'Unknown'}
-                        </span>
+            <div className="flex flex-col h-full">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-6">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                           <div className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                           <span className={`text-[10px] font-bold uppercase tracking-widest ${online ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {online ? 'Active' : 'Offline'}
+                           </span>
+                        </div>
+                        <h3 className="font-bold text-lg tracking-tight group-hover:text-blue-400 transition-colors line-clamp-1">
+                            {node.identifier}
+                        </h3>
+                    </div>
+                    <div className="text-[10px] text-white/30 font-medium bg-white/5 px-2 py-1 rounded">
+                        {node.restVersion || 'v4'}
                     </div>
                 </div>
 
-                {/* Identifier shown in header for minimal view too */}
-                <div className="space-y-0.5 mt-2">
-                    <div className="flex items-center text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                        <Server className="w-3.5 h-3.5 mr-1.5 text-emerald-500" /> Identifier
-                    </div>
-                    <div className="text-sm font-mono text-foreground truncate" title={node.identifier}>
-                        {node.identifier}
-                    </div>
-                </div>
-            </CardHeader>
+                {!minimal && (
+                    <>
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <StatItem 
+                                icon={Activity} 
+                                label="Load" 
+                                value={node.systemLoad} 
+                                color="text-red-400" 
+                            />
+                            <StatItem 
+                                icon={Wifi} 
+                                label="Players" 
+                                value={node.connections?.split('/')[0] || 0} 
+                                color="text-blue-400" 
+                            />
+                        </div>
 
-            {!minimal && (
-                <CardContent className="px-4 pb-3 pt-0">
-                    {/* Main Stats Grid - 2 Columns */}
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-2.5">
-                        {/* Memory */}
-                        <div className="space-y-0.5">
-                            <div className="flex items-center text-xs text-muted-foreground font-semibold">
-                                <HardDrive className="w-3.5 h-3.5 mr-1.5 text-blue-500" /> Memory
+                        {/* Footer Info */}
+                        <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold">
+                                    {node.authorId?.charAt(0).toUpperCase() || '?'}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] uppercase tracking-tighter text-white/30 font-bold">Provider</span>
+                                    <span className="text-xs font-semibold">{node.authorId || 'Unknown'}</span>
+                                </div>
                             </div>
-                            <div className="text-sm font-mono text-foreground truncate">
-                                {node.memory}
-                            </div>
+                            <ChevronRight size={16} className="text-white/20 group-hover:text-white group-hover:translate-x-1 transition-all" />
                         </div>
-                        {/* System Load */}
-                        <div className="space-y-0.5">
-                            <div className="flex items-center text-xs text-muted-foreground font-semibold">
-                                <Activity className="w-3.5 h-3.5 mr-1.5 text-red-500" /> System Load
-                            </div>
-                            <div className="text-sm font-mono text-foreground truncate">
-                                {node.systemLoad}
-                            </div>
-                        </div>
-                        {/* Connections */}
-                        <div className="space-y-0.5">
-                            <div className="flex items-center text-xs text-muted-foreground font-semibold">
-                                <Wifi className="w-3.5 h-3.5 mr-1.5 text-yellow-500" /> Connections
-                            </div>
-                            <div className="text-sm font-mono text-foreground truncate">
-                                {node.connections}
-                            </div>
-                        </div>
-                        {/* CPU Cores */}
-                        <div className="space-y-0.5">
-                            <div className="flex items-center text-xs text-muted-foreground font-semibold">
-                                <Cpu className="w-3.5 h-3.5 mr-1.5 text-purple-500" /> CPU Cores
-                            </div>
-                            <div className="text-sm font-mono text-foreground truncate">
-                                {node.cpuCores}
-                            </div>
-                        </div>
-                        {/* Uptime */}
-                        <div className="space-y-0.5 col-span-2">
-                            <div className="flex items-center text-xs text-muted-foreground font-semibold">
-                                <Clock className="w-3.5 h-3.5 mr-1.5 text-blue-500" /> Uptime
-                            </div>
-                            <div className="text-sm font-mono text-foreground truncate">
-                                {node.uptime}
-                            </div>
-                        </div>
+                    </>
+                )}
+
+                {minimal && (
+                    <div className="mt-auto flex items-center justify-between text-white/20">
+                         <span className="text-xs font-mono">{node.host}</span>
+                         <ChevronRight size={14} />
                     </div>
-
-                    {/* Divider */}
-                    <div className="h-px bg-border/50 my-2" />
-
-                    {/* Version & Info Grid */}
-                    <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                        {/* Version info mapping */}
-                        <div className="flex items-center gap-2">
-                            <Tag className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span className="text-xs text-muted-foreground font-semibold">Version:</span>
-                            <span className="text-xs font-mono text-foreground truncate">{node.info?.version?.semver || 'v4'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Hourglass className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            <span className="text-xs text-muted-foreground font-semibold">BuildTime:</span>
-                            <span className="text-xs font-mono text-foreground truncate">
-                                {node.info?.buildTime ? new Date(node.info.buildTime).toLocaleDateString() : 'Unknown'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Coffee className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                            <span className="text-xs text-muted-foreground font-semibold">Java:</span>
-                            <span className="text-xs font-mono text-foreground truncate">{(node.info?.jvm && node.info.jvm.split(' ')[0]) || 'Unknown'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Disc className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                            <span className="text-xs text-muted-foreground font-semibold">Lavaplayer:</span>
-                            <span className="text-xs font-mono text-foreground truncate">{node.info?.lavaplayer || 'Unknown'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Music className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                            <span className="text-xs text-muted-foreground font-semibold">Source:</span>
-                            <span className="text-xs font-mono text-foreground truncate">{node.info?.sourceManagers?.length || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Plug className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
-                            <span className="text-xs text-muted-foreground font-semibold">Plugins:</span>
-                            <span className="text-xs font-mono text-foreground truncate">{node.info?.plugins?.length || 0}</span>
-                        </div>
-                    </div>
-
-                </CardContent>
-            )}
-        </Card>
+                )}
+            </div>
+        </div>
     );
 }
+
+function StatItem({ icon: Icon, label, value, color }) {
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+                <Icon size={12} className="text-white/20" />
+                <span className="text-[10px] uppercase tracking-widest font-bold text-white/20">{label}</span>
+            </div>
+            <span className={`text-sm font-bold tabular-nums ${color}`}>{value}</span>
+        </div>
+    );
+}

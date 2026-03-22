@@ -2,138 +2,131 @@
 import { useState } from "react";
 import { NodeCard } from "@/components/NodeCard";
 import { NodeDetailsDialog } from "@/components/NodeDetailsDialog";
-import { RefreshCw, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { RefreshCw, Loader2, ArrowLeft } from "lucide-react";
 import { useNodes } from "@/contexts/NodesContext";
+import Link from "next/link";
 
 export function NodeList({ filterSecure, title, description, icon }) {
     const { nodes, loading, fetchNodes, lastFetch } = useNodes();
     const [selectedNode, setSelectedNode] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
 
-    const filteredNodes = nodes
-        .filter((node) => node.secure === filterSecure)
+    const filtered = nodes
+        .filter(n => n.secure === filterSecure)
         .sort((a, b) => {
-            // Sort by connected status (online first)
-            if (a.isConnected !== b.isConnected) return (a.isConnected ? -1 : 1);
-            // Then sort by uptime (highest first)
+            if (a.isConnected !== b.isConnected) return a.isConnected ? -1 : 1;
             return (b.uptimeMillis || 0) - (a.uptimeMillis || 0);
         });
-    const onlineNodes = filteredNodes.filter(n => n.isConnected);
-    const offlineNodes = filteredNodes.filter(n => !n.isConnected);
 
-    const handleNodeClick = (node) => {
+    const online = filtered.filter(n => n.isConnected);
+    const offline = filtered.filter(n => !n.isConnected);
+
+    const formatAge = () => {
+        if (!lastFetch) return "Never";
+        const s = Math.floor((Date.now() - lastFetch) / 1000);
+        if (s < 60) return `${s}s ago`;
+        const m = Math.floor(s / 60);
+        if (m < 60) return `${m}m ago`;
+        return `${Math.floor(m / 60)}h ago`;
+    };
+
+    const handleClick = (node) => {
         setSelectedNode(node);
         setDialogOpen(true);
     };
 
-    // Format last refresh time
-    const formatLastRefresh = () => {
-        if (!lastFetch) return 'Never';
-        const now = Date.now();
-        const diff = now - lastFetch;
-        const seconds = Math.floor(diff / 1000);
-        const minutes = Math.floor(seconds / 60);
-
-        if (minutes < 1) return `${seconds}s ago`;
-        if (minutes < 60) return `${minutes}m ago`;
-        const hours = Math.floor(minutes / 60);
-        return `${hours}h ago`;
-    };
-
     return (
         <>
-            <NodeDetailsDialog
-                node={selectedNode}
-                open={dialogOpen}
-                onOpenChange={setDialogOpen}
-            />
+            <NodeDetailsDialog node={selectedNode} open={dialogOpen} onOpenChange={setDialogOpen} />
 
-            <main className="container mx-auto px-6 py-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold flex items-center gap-3 text-foreground">
-                            {icon}
-                            {title}
-                        </h1>
-                        <p className="text-muted-foreground mt-2 text-sm">
-                            {description}
-                        </p>
+            <main className="min-h-screen bg-[#050505] text-white pt-24 pb-40">
+                <div className="container mx-auto px-6 max-w-6xl">
+                    
+                    <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors mb-8 text-sm group">
+                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back to Home
+                    </Link>
+
+                    <div className="flex flex-col md:flex-row items-start justify-between gap-8 mb-16">
+                        <div className="max-w-xl">
+                            <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 flex items-center gap-4">
+                                <span className="p-3 bg-white/5 rounded-2xl border border-white/10">{icon}</span>
+                                {title}
+                            </h1>
+                            <p className="text-white/40 text-lg leading-relaxed">
+                                {description}
+                            </p>
+                        </div>
+
+                        <button 
+                            onClick={() => fetchNodes(true)} 
+                            disabled={loading}
+                            className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all font-bold text-sm"
+                        >
+                            {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                            {loading ? "Refreshing..." : "Refresh Status"}
+                        </button>
                     </div>
 
-                    <Button
-                        variant="outline"
-                        className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                        onClick={fetchNodes}
-                        disabled={loading}
-                    >
-                        {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                        {loading ? "Refreshing..." : "Refresh"}
-                    </Button>
-                </div>
-
-                {/* Status Indicators */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-8 mb-12 pb-8 border-b border-white/5 text-sm">
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span className="text-sm text-muted-foreground">Online: <span className="text-foreground font-medium">{loading ? '-' : onlineNodes.length}</span></span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-white/40 font-medium">Online:</span>
+                            <span className="font-bold tabular-nums">{loading ? "—" : online.length}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-500" />
-                            <span className="text-sm text-muted-foreground">Offline: <span className="text-foreground font-medium">{loading ? '-' : offlineNodes.length}</span></span>
+                            <span className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className="text-white/40 font-medium">Offline:</span>
+                            <span className="font-bold tabular-nums">{loading ? "—" : offline.length}</span>
+                        </div>
+                        <div className="ml-auto text-white/20 text-xs">
+                            Last sync: {formatAge()}
                         </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                        Last refresh: <span className="text-foreground font-medium">{formatLastRefresh()}</span>
-                    </div>
+
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-40 gap-4">
+                            <Loader2 size={40} className="animate-spin text-white/10" />
+                            <span className="text-white/20 font-medium tracking-widest uppercase text-[10px]">Fetching Live Status</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-20">
+                            {online.length > 0 && (
+                                <section>
+                                    <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-8 flex items-center gap-3">
+                                        <div className="w-8 h-[1px] bg-emerald-500/30" />
+                                        Verified Online Nodes
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+                                        {online.map(n => (
+                                            <NodeCard key={`on-${n.identifier}`} node={n} onClick={handleClick} />
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {offline.length > 0 && (
+                                <section>
+                                     <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 mb-8 flex items-center gap-3">
+                                        <div className="w-8 h-[1px] bg-red-500/30" />
+                                        Currently Offline
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1 opacity-60">
+                                        {offline.map(n => (
+                                            <NodeCard key={`off-${n.identifier}`} node={n} onClick={handleClick} minimal={true} />
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {filtered.length === 0 && (
+                                <div className="text-center py-40 glass-card rounded-3xl border-dashed">
+                                    <p className="text-white/20 font-medium italic">No nodes found in this category.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
-
-                {/* Nodes Grid */}
-                {loading ? (
-                    <div className="flex justify-center items-center py-20">
-                        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-                    </div>
-                ) : (
-                    <div className="space-y-12">
-                        {/* Online Grid */}
-                        {onlineNodes.length > 0 && (
-                            <section>
-                                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                                    Online Nodes
-                                </h2>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-                                    {onlineNodes.map((node) => (
-                                        <NodeCard key={`online-${node.identifier}`} node={node} onClick={handleNodeClick} />
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* Offline Grid */}
-                        {offlineNodes.length > 0 && (
-                            <section>
-                                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                                    Offline Nodes
-                                </h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {offlineNodes.map((node) => (
-                                        <NodeCard key={`offline-${node.identifier}`} node={node} onClick={handleNodeClick} minimal={true} />
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-                    </div>
-                )}
-
-                {!loading && filteredNodes.length === 0 && (
-                    <div className="text-center py-20 text-muted-foreground">
-                        No nodes found in this category.
-                    </div>
-                )}
             </main>
         </>
     );
-}
+}

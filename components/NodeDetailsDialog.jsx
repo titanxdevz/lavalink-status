@@ -33,48 +33,55 @@ export function NodeDetailsDialog({ node, open, onOpenChange }) {
                     Node Details - {node.identifier}
                 </DialogTitle>
                 {/* Header */}
-                <div className="bg-muted/50 p-5 flex items-start justify-between border-b border-border">
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-base font-semibold text-foreground">
-                            Hosted by {node.authorId || 'Unknown'}
-                        </h2>
-                        <div className="flex items-center gap-3 text-xs">
-                            {node.website && (
-                                <a
-                                    href={node.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-muted-foreground hover:text-blue-500 transition-colors flex items-center gap-1"
-                                >
-                                    <Globe className="w-3 h-3" /> Website
-                                </a>
-                            )}
-                            {node.discord && (
-                                <a
-                                    href={node.discord}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-muted-foreground hover:text-indigo-400 transition-colors flex items-center gap-1"
-                                >
-                                    <Server className="w-3 h-3" /> Discord
-                                </a>
-                            )}
+                <div className="bg-muted/50 p-6 flex flex-col md:flex-row md:items-center justify-between border-b border-border gap-6">
+                    <div className="flex items-center gap-4">
+                         <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl font-black text-white italic">
+                            {node.authorId?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <h2 className="text-xl font-bold text-foreground tracking-tight">
+                                {node.identifier}
+                            </h2>
+                            <div className="flex items-center gap-4 text-xs font-medium">
+                                <span className="text-white/40 uppercase tracking-widest text-[10px]">Provided by <span className="text-white font-bold">{node.authorId || 'Unknown'}</span></span>
+                                {node.website && (
+                                    <a
+                                        href={node.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                                    >
+                                        <Globe size={12} /> Website
+                                    </a>
+                                )}
+                                {node.discord && (
+                                    <a
+                                        href={node.discord}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                                    >
+                                        <Server size={12} /> Discord
+                                    </a>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    <button
-                        onClick={() => onOpenChange(false)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-2 self-end md:self-auto">
+                        <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${isOnline ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            {isOnline ? 'Active Node' : 'Disconnected'}
+                        </div>
+                        <button
+                            onClick={() => onOpenChange(false)}
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all ml-4"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="p-5 space-y-6">
-                    {/* Connected Status */}
-                    <div className="flex items-center gap-2.5 text-sm">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                        <span className="font-medium text-foreground">{isOnline ? 'Connected' : 'Disconnected'}</span>
-                    </div>
 
                     {/* Node Identifier */}
                     <div>
@@ -107,12 +114,12 @@ export function NodeDetailsDialog({ node, open, onOpenChange }) {
                             </button>
                             <pre className="text-xs font-mono text-yellow-500 dark:text-yellow-400 leading-relaxed pr-20 overflow-x-auto">
                                 {`{
-  "identifier": "${node.identifier}",
-  "password": "${node.password || 'youshallnotpass'}",
-  "host": "${node.host}",
-  "port": ${node.port},
-  "secure": ${node.secure}
-}`}
+    "identifier": "${node.identifier}",
+    "password": "${node.password || 'youshallnotpass'}",
+    "host": "${node.host}",
+    "port": ${node.port},
+    "secure": ${node.secure}
+    }`}
                             </pre>
                         </div>
                     </div>

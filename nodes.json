@@ -1,14 +1,141 @@
 [
-
     {
-        "identifier": "Stackryze - v4",
-        "host": "188.245.207.225",
-        "port": 2333,
+        "identifier": "Serenetia v4 SSL",
+        "host": "lavalinkv4.serenetia.com",
+        "port": 443,
+        "password": "https://seretia.link/discord",
+        "secure": true,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "Jirayu v4 SSL",
+        "host": "lavalink.jirayu.net",
+        "port": 443,
+        "password": "youshallnotpass",
+        "secure": true,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "MilloHost v4",
+        "host": "lava-v4.millohost.my.id",
+        "port": 443,
+        "password": "https://discord.gg/mjS5J2K3ep",
+        "secure": true,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "TriniumHost v4 SSL",
+        "host": "lavalink-v4.triniumhost.com",
+        "port": 443,
+        "password": "free",
+        "secure": true,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "TriniumHost v3 SSL",
+        "host": "lavalink-v3.triniumhost.com",
+        "port": 443,
+        "password": "free",
+        "secure": true,
+        "restVersion": "v3",
+        "status": "approved"
+    },
+    {
+        "identifier": "Jirayu v4 Non-SSL",
+        "host": "lavalink.jirayu.net",
+        "port": 13592,
         "password": "youshallnotpass",
         "secure": false,
         "restVersion": "v4",
-        "authorId": "Sudheer",
-        "website": "https://stackryze.com",
-        "discord": "https://discord.gg/stackryze"
+        "status": "approved"
+    },
+    {
+        "identifier": "Techbyte Host v4",
+        "host": "lavahatry4.techbyte.host",
+        "port": 3000,
+        "password": "naig.is-a.dev",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "Serenetia v4 Non-SSL",
+        "host": "lavalinkv4.serenetia.com",
+        "port": 80,
+        "password": "https://seretia.link/discord",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "Nyxbot SG1",
+        "host": "sg1-nodelink.nyxbot.app",
+        "port": 3000,
+        "password": "nyxbot.app/support",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "Nyxbot SG2",
+        "host": "sg2-nodelink.nyxbot.app",
+        "port": 3000,
+        "password": "nyxbot.app/support",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "G3V UK",
+        "host": "lava.g3v.co.uk",
+        "port": 9008,
+        "password": "lavalinklol",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "TriniumHost v4 Non-SSL",
+        "host": "lavalink.triniumhost.com",
+        "port": 4333,
+        "password": "free",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "TriniumHost v3 Non-SSL",
+        "host": "lavalink.triniumhost.com",
+        "port": 2334,
+        "password": "free",
+        "secure": false,
+        "restVersion": "v3",
+        "status": "approved"
+    },
+    {
+        "identifier": "Nexcloud v4",
+        "host": "n3.nexcloud.in",
+        "port": 2026,
+        "password": "nexcloud",
+        "secure": false,
+        "restVersion": "v4",
+        "status": "approved"
+    },
+    {
+        "identifier": "VexaNode Lavalink v4",
+        "host": "omega.vexanode.cloud",
+        "port": 2031,
+        "password": "https://discord.vexanode.cloud",
+        "secure": false,
+        "restVersion": "v4",
+        "authorId": "Ansh4Real",
+        "website": "https://vexanode.cloud",
+        "discord": null,
+        "status": "approved",
+        "createdAt": "2026-03-22T11:12:45.770Z"
     }
 ]

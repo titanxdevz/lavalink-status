@@ -4,108 +4,108 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 const NodesContext = createContext();
 
 const CACHE_KEY = "lavalink_nodes_cache";
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 
 export function NodesProvider({ children }) {
     const [nodes, setNodes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [lastFetch, setLastFetch] = useState(null);
-    const isMountedRef = useRef(true);
+    const mounted = useRef(true);
 
     const fetchNodes = useCallback(async (force = false) => {
-        // Check if we need to fetch
-        if (!force && lastFetch && (Date.now() - lastFetch < CACHE_TTL)) {
-            return; // Use cached data
-        }
+        if (!force && lastFetch && Date.now() - lastFetch < CACHE_TTL) return;
 
         setLoading(true);
         setError(null);
+
         try {
-            const apiUrl = "/api/nodes";
-
-            const res = await fetch(apiUrl);
-
+            const res = await fetch("/api/nodes");
             if (!res.ok) {
                 const text = await res.text();
                 throw new Error(`API Error (${res.status}): ${text.slice(0, 100)}`);
             }
-
             const data = await res.json();
-
-            if (isMountedRef.current) {
+            if (mounted.current) {
                 setNodes(data);
-                const timestamp = Date.now();
-                setLastFetch(timestamp);
-
-                // Cache to localStorage
-                localStorage.setItem(
-                    CACHE_KEY,
-                    JSON.stringify({ data, timestamp })
-                );
+                const ts = Date.now();
+                setLastFetch(ts);
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: ts }));
             }
         } catch (err) {
-            console.error("Failed to fetch nodes:", err);
-            if (isMountedRef.current) {
-                setError(err.message || "Failed to fetch nodes");
-            }
+            if (mounted.current) setError(err.message || "Failed to fetch nodes");
         } finally {
-            if (isMountedRef.current) {
-                setLoading(false);
-            }
+            if (mounted.current) setLoading(false);
         }
     }, [lastFetch]);
 
-    // Load from cache on mount
     useEffect(() => {
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             try {
                 const { data, timestamp } = JSON.parse(cached);
-                const age = Date.now() - timestamp;
-
-                if (age < CACHE_TTL) {
+                if (Date.now() - timestamp < CACHE_TTL) {
                     setNodes(data);
                     setLastFetch(timestamp);
                     setLoading(false);
                     return;
                 }
-            } catch (e) {
-                console.error("Failed to parse cache:", e);
-            }
+            } catch { }
         }
-
-        // If no valid cache, fetch
         fetchNodes();
     }, [fetchNodes]);
 
-    // Auto-refresh every 2 minutes
     useEffect(() => {
-        const interval = setInterval(() => {
-            fetchNodes(true);
-        }, 2 * 60 * 1000); // 2 minutes
-
-        return () => clearInterval(interval);
+        const id = setInterval(() => fetchNodes(true), 2 * 60 * 1000);
+        return () => clearInterval(id);
     }, [fetchNodes]);
 
-    // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            isMountedRef.current = false;
-        };
+        return () => { mounted.current = false; };
     }, []);
 
+    const submitNode = async (nodeData) => {
+        const res = await fetch("/api/nodes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nodeData)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return await res.json();
+    };
+
+    const updateNodeStatus = async (host, port, status) => {
+        const res = await fetch("/api/nodes", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ host, port, status })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        fetchNodes(true);
+        return await res.json();
+    };
+
+    const deleteNode = async (host, port) => {
+        const res = await fetch(`/api/nodes?host=${host}&port=${port}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error(await res.text());
+        fetchNodes(true);
+        return await res.json();
+    };
+
     return (
-        <NodesContext.Provider value={{ nodes, loading, error, fetchNodes, lastFetch }}>
+        <NodesContext.Provider value={{ 
+            nodes, loading, error, fetchNodes, lastFetch,
+            submitNode, updateNodeStatus, deleteNode 
+        }}>
             {children}
         </NodesContext.Provider>
     );
 }
 
 export function useNodes() {
-    const context = useContext(NodesContext);
-    if (!context) {
-        throw new Error("useNodes must be used within NodesProvider");
-    }
-    return context;
+    const ctx = useContext(NodesContext);
+    if (!ctx) throw new Error("useNodes must be used within NodesProvider");
+    return ctx;
 }
