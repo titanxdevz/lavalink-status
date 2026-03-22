@@ -1,31 +1,15 @@
 import { NextResponse } from 'next/server';
-import fs from 'node:fs';
-import path from 'node:path';
+import clientPromise from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 import dns from 'node:dns';
 
 // Force prioritize IPv4 over IPv6 to fix connectivity issues on localhost
 dns.setDefaultResultOrder('ipv4first');
 
-const NODES_FILE = path.join(process.cwd(), 'nodes.json');
-
-function readNodes() {
-    try {
-        const data = fs.readFileSync(NODES_FILE, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error("Error reading nodes.json:", error);
-        return [];
-    }
-}
-
-function writeNodes(nodes) {
-    try {
-        fs.writeFileSync(NODES_FILE, JSON.stringify(nodes, null, 4));
-        return true;
-    } catch (error) {
-        console.error("Error writing nodes.json:", error);
-        return false;
-    }
+async function getNodesCollection() {
+    const client = await clientPromise;
+    const db = client.db("lavalink-list");
+    return db.collection("nodes");
 }
 
 // Helper to format bytes
@@ -77,11 +61,11 @@ export async function GET(request) {
     const showAll = searchParams.get('all') === 'true';
 
     try {
-        const localNodes = readNodes();
-        // If showAll is false, only show approved nodes
-        const filteredNodes = showAll ? localNodes : localNodes.filter(n => n.status === 'approved');
+        const collection = await getNodesCollection();
+        const query = showAll ? {} : { status: 'approved' };
+        const localNodes = await collection.find(query).toArray();
 
-        const nodePromises = filteredNodes.map(async (node) => {
+        const nodePromises = localNodes.map(async (node) => {
             const protocol = node.secure ? "https" : "http";
             const baseUrl = `${protocol}://${node.host}:${node.port}`;
             const version = node.restVersion || 'v4';
@@ -111,6 +95,7 @@ export async function GET(request) {
 
                 return {
                     ...node,
+                    _id: node._id.toString(), // Convert ObjectId to string for front-end
                     isConnected: true,
                     memory: formatBytes(stats.memory?.used || 0),
                     cpu: `${systemLoad}%`,
@@ -126,6 +111,7 @@ export async function GET(request) {
                 clearTimeout(timeoutId);
                 return {
                     ...node,
+                    _id: node._id.toString(), // Convert ObjectId to string for front-end
                     isConnected: false,
                     memory: "0 B",
                     cpu: "0%",
@@ -157,7 +143,7 @@ export async function POST(request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const nodes = readNodes();
+        const collection = await getNodesCollection();
         const newNode = {
             identifier,
             host,
@@ -172,12 +158,12 @@ export async function POST(request) {
             createdAt: new Date().toISOString()
         };
 
-        nodes.push(newNode);
-        if (writeNodes(nodes)) {
-            return NextResponse.json({ message: "Node submitted for approval", node: newNode });
-        } else {
-            return NextResponse.json({ error: "Failed to save node" }, { status: 500 });
-        }
+        const result = await collection.insertOne(newNode);
+        
+        return NextResponse.json({ 
+            message: "Node submitted for approval", 
+            node: { ...newNode, _id: result.insertedId.toString() } 
+        });
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -186,25 +172,31 @@ export async function POST(request) {
 export async function PATCH(request) {
     try {
         const body = await request.json();
-        const { host, port, status } = body; // Using host+port as unique key for now
+        const { _id, host, port, ...updates } = body;
 
-        if (!host || !port || !status) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        if (!_id && (!host || !port)) {
+            return NextResponse.json({ error: "Missing required identifier" }, { status: 400 });
         }
 
-        let nodes = readNodes();
-        const index = nodes.findIndex(n => n.host === host && n.port === parseInt(port));
+        const collection = await getNodesCollection();
+        let query = {};
+        if (_id) {
+            query = { _id: new ObjectId(_id) };
+        } else {
+            query = { host: host, port: parseInt(port) };
+        }
 
-        if (index === -1) {
+        if (updates.port !== undefined) {
+             updates.port = parseInt(updates.port);
+        }
+
+        const result = await collection.updateOne(query, { $set: updates });
+
+        if (result.matchedCount === 0) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
-        nodes[index].status = status;
-        if (writeNodes(nodes)) {
-            return NextResponse.json({ message: `Node status updated to ${status}` });
-        } else {
-            return NextResponse.json({ error: "Failed to update node" }, { status: 500 });
-        }
+        return NextResponse.json({ message: `Node updated successfully` });
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -220,18 +212,17 @@ export async function DELETE(request) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        let nodes = readNodes();
-        const filteredNodes = nodes.filter(n => !(n.host === host && n.port === parseInt(port)));
+        const collection = await getNodesCollection();
+        const result = await collection.deleteOne({ 
+            host: host, 
+            port: parseInt(port) 
+        });
 
-        if (filteredNodes.length === nodes.length) {
+        if (result.deletedCount === 0) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
-        if (writeNodes(filteredNodes)) {
-            return NextResponse.json({ message: "Node deleted successfully" });
-        } else {
-            return NextResponse.json({ error: "Failed to delete node" }, { status: 500 });
-        }
+        return NextResponse.json({ message: "Node deleted successfully" });
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

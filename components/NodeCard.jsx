@@ -1,9 +1,5 @@
 "use client";
-import {
-    Server, Cpu, HardDrive, Activity, Clock,
-    Wifi, Tag, Coffee, Music, Plug, Disc, Hourglass,
-    ChevronRight, ExternalLink
-} from "lucide-react";
+import { Activity, Wifi, ChevronRight } from "lucide-react";
 
 export function NodeCard({ node, onClick, minimal = false }) {
     const online = node.isConnected;
@@ -12,72 +8,71 @@ export function NodeCard({ node, onClick, minimal = false }) {
         <div
             onClick={onClick ? () => onClick(node) : undefined}
             className={`
-                relative group overflow-hidden transition-all duration-300
-                bg-white/[0.02] border border-white/[0.08] hover:border-white/20
-                hover:bg-white/[0.04] p-6 cursor-pointer
-                ${minimal ? 'h-32' : 'h-auto'}
+                relative group flex flex-col cursor-pointer transition-all font-mono
+                bg-[#09090b] border-2 border-[#27272a]
+                hover:-translate-y-1 hover:-translate-x-1 hover:border-white hover:shadow-[6px_6px_0px_0px_#3b82f6]
+                ${minimal ? 'h-32' : 'h-full'}
             `}
         >
-            {/* Status accent line */}
-            <div className={`absolute top-0 left-0 bottom-0 w-[2px] transition-all duration-300 ${online ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-red-500 opacity-50'}`} />
+            <div className={`h-2 w-full border-b-2 border-[#27272a] transition-colors ${online ? 'bg-emerald-500' : 'bg-red-500 group-hover:bg-red-400'}`} />
 
-            <div className="flex flex-col h-full">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-6">
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                           <div className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                           <span className={`text-[10px] font-bold uppercase tracking-widest ${online ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {online ? 'Active' : 'Offline'}
-                           </span>
+            <div className="p-6 flex flex-col h-full">
+                <div className="flex items-start justify-between mb-6 gap-4">
+                    <div className="flex flex-col gap-3 overflow-hidden">
+                        <div className={`self-start inline-flex items-center px-3 py-1 border-2 border-[#27272a] text-[10px] font-black uppercase tracking-widest transition-colors ${online ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10'}`}>
+                            {online ? 'ONLINE' : 'OFFLINE'}
                         </div>
-                        <h3 className="font-bold text-lg tracking-tight group-hover:text-blue-400 transition-colors line-clamp-1">
+                        <h3 className="font-black text-xl uppercase tracking-tighter text-white truncate w-full group-hover:text-blue-500 transition-colors">
                             {node.identifier}
                         </h3>
                     </div>
-                    <div className="text-[10px] text-white/30 font-medium bg-white/5 px-2 py-1 rounded">
-                        {node.restVersion || 'v4'}
+                    <div className="shrink-0 text-xs font-black uppercase tracking-widest text-[#a1a1aa] border-2 border-[#27272a] px-3 py-1 bg-[#000000]">
+                        {node.restVersion || 'V4'}
                     </div>
                 </div>
 
                 {!minimal && (
                     <>
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <StatItem 
-                                icon={Activity} 
-                                label="Load" 
-                                value={node.systemLoad} 
-                                color="text-red-400" 
+                        <div className="grid grid-cols-2 gap-4 mb-6 border-y-2 border-[#27272a] py-4 bg-[#000000]/50 px-4 -mx-6">
+                            <StatItem
+                                icon={Activity}
+                                label="LOAD"
+                                value={node.systemLoad || '0%'}
+                                color="text-red-500"
                             />
-                            <StatItem 
-                                icon={Wifi} 
-                                label="Players" 
-                                value={node.connections?.split('/')[0] || 0} 
-                                color="text-blue-400" 
+                            <StatItem
+                                icon={Wifi}
+                                label="PLAYERS"
+                                value={node.connections?.split('/')[0] || '0'}
+                                color="text-blue-500"
                             />
                         </div>
 
-                        {/* Footer Info */}
-                        <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold">
+                        <div className="mt-auto flex items-center justify-between pt-2">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 border-2 border-[#27272a] bg-[#000000] flex items-center justify-center text-sm font-black text-white group-hover:border-blue-500 transition-colors">
                                     {node.authorId?.charAt(0).toUpperCase() || '?'}
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] uppercase tracking-tighter text-white/30 font-bold">Provider</span>
-                                    <span className="text-xs font-semibold">{node.authorId || 'Unknown'}</span>
+                                    <span className="text-[10px] uppercase tracking-widest text-[#52525b] font-black">PROVIDER</span>
+                                    <span className="text-sm font-black text-white uppercase truncate max-w-[120px]">
+                                        {node.authorId || 'UNKNOWN'}
+                                    </span>
                                 </div>
                             </div>
-                            <ChevronRight size={16} className="text-white/20 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                            <div className="p-2 border-2 border-[#27272a] bg-[#000000] text-[#a1a1aa] group-hover:bg-blue-500 group-hover:text-black group-hover:border-blue-500 transition-all">
+                                <ChevronRight size={18} />
+                            </div>
                         </div>
                     </>
                 )}
 
                 {minimal && (
-                    <div className="mt-auto flex items-center justify-between text-white/20">
-                         <span className="text-xs font-mono">{node.host}</span>
-                         <ChevronRight size={14} />
+                    <div className="mt-auto flex items-center justify-between text-[#a1a1aa] pt-4 border-t-2 border-[#27272a]">
+                        <span className="text-xs font-black uppercase tracking-widest truncate max-w-[200px]">{node.host}</span>
+                        <div className="p-1 border-2 border-[#27272a] group-hover:bg-white group-hover:text-black transition-colors">
+                            <ChevronRight size={14} />
+                        </div>
                     </div>
                 )}
             </div>
@@ -87,12 +82,12 @@ export function NodeCard({ node, onClick, minimal = false }) {
 
 function StatItem({ icon: Icon, label, value, color }) {
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5">
-                <Icon size={12} className="text-white/20" />
-                <span className="text-[10px] uppercase tracking-widest font-bold text-white/20">{label}</span>
+        <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+                <Icon size={14} className="text-[#52525b]" />
+                <span className="text-[10px] uppercase tracking-widest font-black text-[#a1a1aa]">{label}</span>
             </div>
-            <span className={`text-sm font-bold tabular-nums ${color}`}>{value}</span>
+            <span className={`text-xl font-black tabular-nums tracking-tighter ${color}`}>{value}</span>
         </div>
     );
-}
+}
