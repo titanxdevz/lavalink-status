@@ -27,7 +27,7 @@ export default function TermsPage() {
                         <section className="space-y-4">
                             <h2 className="text-2xl font-bold text-white tracking-tight">Introduction</h2>
                             <p>
-                                Welcome to Lavalink List. By accessing our website, you agree to these terms of service. 
+                                Welcome to Lavalink List By VexaNode. By accessing our website, you agree to these terms of service. 
                                 Please read them carefully before using our directory.
                             </p>
                         </section>
