@@ -1,3 +1,4 @@
+```js
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -15,6 +16,9 @@ export const metadata = {
   description: "Free public Lavalink nodes for Discord music bots. Always online, always expanding. Powered by Vexanode.",
   keywords: ["free lavalink", "lavalink nodes", "discord music bot", "public lavalink", "vexanode lavalink"],
   metadataBase: new URL("https://lavalink.vexanode.cloud"),
+  verification: {
+    google: "ouRCE7TwOlmYzYZcQseFITvGq7okszK_7eqqvpERRJ0",
+  },
   icons: {
     icon: "/stackryze_logo_white.png",
     apple: "/stackryze_logo_white.png",
@@ -52,3 +56,4 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+```
