@@ -74,11 +74,14 @@ export function NodesProvider({ children }) {
         return await res.json();
     };
 
-    const updateNodeStatus = async (host, port, status) => {
+    const updateNodeStatus = async (host, port, status, reason = null) => {
+        const body = { host, port, status };
+        if (reason) body.reason = reason;
+        
         const res = await fetch("/api/nodes", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ host, port, status })
+            body: JSON.stringify(body)
         });
         if (!res.ok) throw new Error(await res.text());
         fetchNodes(true);

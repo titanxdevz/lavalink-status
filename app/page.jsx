@@ -1,320 +1,454 @@
 "use client";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Shield, Server, ArrowRight, Search, Activity, Users, Zap, Globe, Plus } from "lucide-react";
-import Link from "next/link";
-import { useNodes } from "@/contexts/NodesContext";
-import { useEffect, useState, useRef, useMemo } from "react";
 import { NodeCard } from "@/components/NodeCard";
 import { NodeDetailsDialog } from "@/components/NodeDetailsDialog";
-import { SiteLoader } from "@/components/SiteLoader";
-import { NodeCheckerTool } from "@/components/NodeCheckerTool";
-import { ConfigGeneratorTool } from "@/components/ConfigGeneratorTool";
+import { useNodes } from "@/contexts/NodesContext";
+import { Shield, Server, ArrowRight, Search, Activity, Users, Zap, Globe, Plus, Terminal, RefreshCw, Loader2, Code, Cpu, Database, Lock, Wifi, Check, X, ChevronRight, Play, Volume2, Music, Settings, Headphones, Layers, Command, Cpu as CpuIcon, Network, GitBranch, Clock } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState, useMemo } from "react";
 
+const CODE_SNIPPETS = [
+  {
+    language: "JAVASCRIPT (SHOUKAKU)",
+    icon: Code,
+    color: "yellow",
+    code: `const { Shoukaku, Connectors } = require('shoukaku');
+const { Client, GatewayIntentBits } = require('discord.js');
 
-function AnimatedNumber({ value, duration = 1200 }) {
-  const [display, setDisplay] = useState(0);
-  const startRef = useRef(0);
-  const rafRef = useRef(null);
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates] });
+const nodes = [
+    {
+        name: 'COMMUNITY-NODE-1',
+        url: 'node1.lavalink.directory:2333',
+        auth: 'youshallnotpass',
+        secure: false
+    }
+];
 
-  useEffect(() => {
-    const from = startRef.current;
-    const to = value;
-    const t0 = performance.now();
-    const step = (now) => {
-      const p = Math.min((now - t0) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 4);
-      setDisplay(Math.round(from + (to - from) * ease));
-      if (p < 1) rafRef.current = requestAnimationFrame(step);
-      else startRef.current = to;
-    };
-    rafRef.current = requestAnimationFrame(step);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [value, duration]);
+const shoukaku = new Shoukaku(new Connectors.DiscordJS(client), nodes);
 
-  return <>{display}</>;
-}
+shoukaku.on('error', (_, error) => console.error('Lavalink Error:', error));
+shoukaku.on('ready', (name) => console.log(\`Node \${name} is now connected\`));
+
+client.login('YOUR_BOT_TOKEN');`
+  },
+  {
+    language: "PYTHON (WAVELINK)",
+    icon: Command,
+    color: "blue",
+    code: `import discord
+import wavelink
+from discord.ext import commands
+
+class Bot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix='!', intents=discord.Intents.all())
+
+    async def setup_hook(self):
+        nodes = [
+            wavelink.Node(
+                uri="http://node1.lavalink.directory:2333",
+                password="youshallnotpass"
+            )
+        ]
+        await wavelink.Pool.connect(nodes=nodes, client=self)
+
+@discord.utils.setup_logging()
+async def main():
+    async with Bot() as bot:
+        await bot.start('YOUR_BOT_TOKEN')`
+  },
+  {
+    language: "JAVA (LAVAPLAYER/JDA)",
+    icon: Layers,
+    color: "red",
+    code: `import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import lavalink.client.io.jda.JdaLavalink;
+import net.dv8tion.jda.api.JDABuilder;
+
+public class Bot {
+    public static void main(String[] args) throws Exception {
+        JdaLavalink lavalink = new JdaLavalink(
+            "YOUR_BOT_ID",
+            1,
+            shardId -> jdaInstance
+        );
+
+        lavalink.addNode(
+            "COMMUNITY-NODE-1",
+            java.net.URI.create("ws://node1.lavalink.directory:2333"),
+            "youshallnotpass"
+        );
+
+        JDABuilder builder = JDABuilder.createDefault("YOUR_BOT_TOKEN")
+            .addEventListeners(lavalink)
+            .setVoiceDispatchInterceptor(lavalink.getVoiceInterceptor());
+            
+        builder.build();
+    }
+}`
+  }
+];
+
+const EXTENDED_FEATURES = [
+  { title: "ZERO_INFRASTRUCTURE_COSTS", desc: "LEVERAGE COMMUNITY-DRIVEN POWER WITHOUT PAYING FOR EXPENSIVE VPS INSTANCES OR DEDICATED SERVERS. COMPLETELY FREE TO USE.", icon: Shield, color: "emerald" },
+  { title: "GLOBAL_LATENCY_CONTROL", desc: "CHOOSE NODES CLOSEST TO YOUR DISCORD VOICE REGIONS TO MINIMIZE PACKET LOSS AND ELIMINATE AUDIO STUTTERING.", icon: Globe, color: "blue" },
+  { title: "AUTOMATED_VERIFICATION", desc: "OUR SYSTEM TRACKS UPTIME, MEMORY USAGE, AND PLAYER LOAD 24/7, ENSURING YOU ONLY SEE HEALTHY NODES.", icon: Activity, color: "purple" },
+  { title: "DDoS_PROTECTION", desc: "MOST DIRECTORY NODES ARE ROUTED THROUGH CLOUDFLARE OR EQUIVALENT PROXIES, SAFEGUARDING YOUR BOT'S AUDIO STREAM.", icon: Lock, color: "red" },
+  { title: "WEBSOCKET_OPTIMIZATION", desc: "LOW-LEVEL WEBSOCKET TUNING FOR ZERO-DELAY PLAYBACK, ENSURING INSTANT PAUSE, RESUME, AND SEEK OPERATIONS.", icon: Zap, color: "amber" },
+  { title: "V4_PROTOCOL_SUPPORT", desc: "FULLY COMPATIBLE WITH LAVALINK V4 SPECIFICATIONS, INCLUDING PLUGINS FOR SPOTIFY, APPLE MUSIC, AND MORE.", icon: Layers, color: "cyan" }
+];
+
+const ARCHITECTURE_STEPS = [
+  { title: "DISCORD_VOICE_GATEWAY", desc: "YOUR BOT ESTABLISHES A SECURE WEBSOCKET CONNECTION TO DISCORD'S VOICE SERVERS.", icon: Headphones },
+  { title: "LAVALINK_NODE_ROUTING", desc: "AUDIO REQUESTS ARE FORWARDED TO THE SELECTED COMMUNITY NODE VIA REST API.", icon: Network },
+  { title: "AUDIO_DECODING_MATRIX", desc: "THE NODE DOWNLOADS, DECODES, AND ENCODES THE AUDIO STREAM INTO OPUS FORMAT.", icon: CpuIcon },
+  { title: "UDP_PACKET_STREAMING", desc: "ENCODED AUDIO PACKETS ARE BLASTED DIRECTLY TO DISCORD'S UDP SERVERS IN REAL-TIME.", icon: Wifi }
+];
+
+const FAQS = [
+  { q: "IS_IT_REALLY_FREE?", a: "YES. ALL NODES LISTED IN THIS DIRECTORY ARE HOSTED BY VOLUNTEERS AND SPONSORS. THEY ARE COMPLETELY FREE TO USE FOR ANY DISCORD BOT, REGARDLESS OF SIZE.", icon: Shield, color: "emerald" },
+  { q: "HOW_DO_I_ADD_MY_OWN_NODE?", a: "CLICK THE 'ADD_NODE' BUTTON AT THE TOP OF THE PAGE. SUBMIT YOUR NODE'S CREDENTIALS AND ENDPOINT. OUR AUTOMATED SYSTEM WILL VERIFY ITS HEALTH BEFORE LISTING IT PUBLICLY.", icon: Plus, color: "blue" },
+  { q: "WHICH_LAVALINK_VERSION_IS_SUPPORTED?", a: "THE MAJORITY OF OUR NODES RUN LAVALINK V3 OR V4. THE SPECIFIC VERSION, ALONG WITH LOADED PLUGINS, IS DISPLAYED ON EACH NODE'S DETAILED CARD.", icon: Server, color: "purple" },
+  { q: "CAN_I_USE_THESE_FOR_LARGE_BOTS?", a: "WHILE PUBLIC NODES ARE GREAT, WE STRONGLY RECOMMEND IMPLEMENTING A FAILOVER SYSTEM FOR BOTS IN OVER 1,000 SERVERS. RELYING ON A SINGLE FREE NODE FOR MASSIVE TRAFFIC IS RISKY.", icon: Users, color: "amber" },
+  { q: "WHAT_HAPPENS_IF_A_NODE_GOES_OFFLINE?", a: "OUR DIRECTORY PINGS ALL NODES EVERY 60 SECONDS. IF A NODE FAILS THREE CONSECUTIVE PINGS, IT IS TEMPORARILY REMOVED FROM THE ACTIVE GRID UNTIL IT RECOVERS.", icon: Activity, color: "red" },
+  { q: "ARE_CUSTOM_PLUGINS_SUPPORTED?", a: "MANY HOSTS PRE-LOAD PLUGINS LIKE LAVA-SRC (FOR SPOTIFY/APPLE MUSIC) OR FILTER PLUGINS. CHECK THE 'PLUGINS' BADGE ON THE NODE DETAILS DIALOG FOR SPECIFICS.", icon: GitBranch, color: "cyan" },
+  { q: "IS_YOUTUBE_PLAYBACK_SUPPORTED?", a: "DUE TO RECENT YOUTUBE RESTRICTIONS, SOME NODES MAY STRUGGLE WITH YOUTUBE PLAYBACK UNLESS THEY CONFIGURE IPV6 ROTATION. WE RECOMMEND USING SPOTIFY OR SOUNDCLOUD SOURCES.", icon: Play, color: "pink" },
+  { q: "HOW_DO_I_REPORT_A_MALICIOUS_NODE?", a: "IF YOU DETECT A NODE INTERCEPTING TRAFFIC OR PERFORMING MALICIOUS ACTIONS, JOIN OUR DISCORD AND OPEN A TICKET. WE WILL BLACKLIST THE HOST PERMANENTLY.", icon: X, color: "rose" }
+];
 
 export default function HomePage() {
-  const { nodes, loading } = useNodes();
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const { nodes, loading, fetchNodes, lastFetch } = useNodes();
   const [search, setSearch] = useState("");
   const [selectedNode, setSelectedNode] = useState(null);
+  const [activeCodeTab, setActiveCodeTab] = useState(0);
+  const [regionFilter, setRegionFilter] = useState("ALL");
 
-  useEffect(() => {
-    setMounted(true);
-    const t = setTimeout(() => setVisible(true), 100);
-    return () => clearTimeout(t);
-  }, []);
+  const formatAge = () => {
+    if (!lastFetch) return "NEVER";
+    const s = Math.floor((Date.now() - lastFetch) / 1000);
+    if (s < 60) return `${s}S AGO`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}M AGO`;
+    return `${Math.floor(m / 60)}H AGO`;
+  };
 
   const stats = useMemo(() => {
     const total = nodes.length;
     const online = nodes.filter(n => n.isConnected).length;
     const players = nodes.reduce((acc, node) => {
-        if (!node.connections) return acc;
-        return acc + (parseInt(node.connections.split("/")[0], 10) || 0);
+      if (!node.connections) return acc;
+      return acc + (parseInt(node.connections.split("/")[0], 10) || 0);
     }, 0);
+    const memory = nodes.reduce((acc, node) => {
+      if (!node.memory) return acc;
+      return acc + (parseInt(node.memory.replace(/\D/g, ''), 10) || 0);
+    }, 0);
+    const memoryGB = (memory / 1024).toFixed(1);
     const countries = new Set(nodes.map(n => n.host?.split('.').pop())).size;
 
     return [
-        { label: "Active Nodes", value: total, icon: Server, color: "#3b82f6" },
-        { label: "Live Players", value: players, icon: Users, color: "#a855f7" },
-        { label: "Online Ratio", value: total ? Math.round((online / total) * 100) : 0, icon: Activity, color: "#16a34a", suffix: "%" },
-        { label: "Global Reach", value: countries, icon: Globe, color: "#eab308" },
+      { label: "ACTIVE_NODES", value: total, icon: Server, color: "blue" },
+      { label: "LIVE_PLAYERS", value: players, icon: Users, color: "emerald" },
+      { label: "NETWORK_MEMORY", value: memoryGB, icon: Database, suffix: "GB", color: "purple" },
+      { label: "GLOBAL_REACH", value: countries, icon: Globe, suffix: " TLDs", color: "amber" },
     ];
   }, [nodes]);
 
-  const filteredNodes = nodes.filter(n => 
-    n.isConnected && (
-    n.identifier?.toLowerCase().includes(search.toLowerCase()) ||
-    n.host?.toLowerCase().includes(search.toLowerCase())
-  )).slice(0, 6);
+  const filteredNodes = useMemo(() => {
+    return nodes.filter(n => {
+      const matchesSearch = n.identifier?.toLowerCase().includes(search.toLowerCase()) || n.host?.toLowerCase().includes(search.toLowerCase());
+      const isOnline = n.isConnected;
+      const matchesRegion = regionFilter === "ALL" || (n.region && n.region.toUpperCase() === regionFilter);
+      return isOnline && matchesSearch && matchesRegion;
+    }).slice(0, 9);
+  }, [nodes, search, regionFilter]);
+
+  const availableRegions = useMemo(() => {
+    const regions = new Set(nodes.filter(n => n.region).map(n => n.region.toUpperCase()));
+    return ["ALL", ...Array.from(regions)];
+  }, [nodes]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-primary/30 font-sans relative">
-      <SiteLoader isLoading={loading} />
-      
-      {/* Visual background layers */}
-      <div className="fixed inset-0 pointer-events-none opacity-20 z-0">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.1),transparent_70%)]"></div>
+    <div className="min-h-screen bg-[#000000] text-[#f4f4f5] font-mono selection:bg-blue-500 selection:text-white relative overflow-x-hidden">
+      <div className="fixed inset-0 pointer-events-none z-0 flex flex-wrap opacity-10">
+        {[...Array(400)].map((_, i) => (
+          <div key={i} className="w-8 h-8 border-[0.5px] border-[#333333]"></div>
+        ))}
       </div>
+
       <style>{`
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(20px); }
+        @keyframes revealUp {
+            from { opacity: 0; transform: translateY(40px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes glow {
-            0%, 100% { opacity: 0.3; filter: blur(40px); }
-            50% { opacity: 0.6; filter: blur(60px); }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-40px); }
+            to { opacity: 1; transform: translateX(0); }
         }
-        .animate-fade-up { animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.2s; }
-        .delay-3 { animation-delay: 0.3s; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
+        @keyframes pulseBorder {
+            0% { border-color: #3b82f6; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { border-color: #60a5fa; box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { border-color: #3b82f6; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        .animate-reveal { animation: revealUp 0.6s cubic-bezier(0, 0, 0.2, 1) forwards; opacity: 0; }
+        .animate-slide { animation: slideRight 0.6s cubic-bezier(0, 0, 0.2, 1) forwards; opacity: 0; }
+        .scanline-effect::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.3) 51%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
         }
       `}</style>
 
-      <Navbar activeTab="home" />
-      <NodeDetailsDialog node={selectedNode} open={!!selectedNode} onOpenChange={() => setSelectedNode(null)} />
+      <div className="fixed top-0 left-0 right-0 h-1 bg-blue-500/20 z-50 overflow-hidden">
+        <div className="absolute top-0 left-0 h-full bg-blue-500 w-1/3 animate-[slideRight_2s_infinite_linear]"></div>
+      </div>
 
-      <main className="relative pt-20 pb-40 overflow-hidden">
-        {/* Background Glows */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full mix-blend-screen animate-glow" />
-        <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] bg-purple-600/10 rounded-full mix-blend-screen animate-glow" style={{ animationDelay: '2s' }} />
+      <Navbar />
 
-        <div className="container mx-auto px-6 relative z-10">
-          {/* Hero Section */}
-          <div className="max-w-4xl mx-auto text-center mb-24">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/60 mb-8 animate-fade-up">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              Community Driven Lavalink Directory
+      <main className="relative z-10">
+        {/* Hero Section */}
+        <section className="min-h-screen flex items-center justify-center px-6 py-20">
+          <div className="max-w-6xl mx-auto text-center space-y-12">
+            <div className="animate-reveal space-y-8">
+              <div className="flex items-center justify-center gap-6 mb-8">
+                <div className="w-20 h-20 bg-blue-500 text-black flex items-center justify-center border-2 border-transparent shadow-[8px_8px_0px_0px_#f4f4f5]">
+                  <Server size={40} />
+                </div>
+                <h1 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-none text-white">
+                  LAVALINK
+                  <span className="block text-blue-500">GRID</span>
+                </h1>
+              </div>
+
+              <p className="text-xl md:text-2xl font-medium text-[#a1a1aa] max-w-3xl mx-auto leading-relaxed uppercase tracking-wide">
+                COMMUNITY-POWERED AUDIO STREAMING INFRASTRUCTURE FOR DISCORD BOTS
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm font-black uppercase tracking-widest">
+                <div className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] px-6 py-3">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-emerald-400">{stats[0]?.value || 0} NODES ONLINE</span>
+                </div>
+                <div className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] px-6 py-3">
+                  <Users size={16} className="text-blue-400" />
+                  <span className="text-blue-400">{stats[1]?.value || 0} ACTIVE STREAMS</span>
+                </div>
+                <div className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] px-6 py-3">
+                  <Clock size={16} className="text-[#a1a1aa]" />
+                  <span className="text-[#a1a1aa]">UPDATED {formatAge()}</span>
+                </div>
+              </div>
             </div>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9] animate-fade-up delay-1">
-              Lavalink <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">Directory</span>
-            </h1>
-            <p className="text-xl text-white/50 max-w-2xl mx-auto mb-12 animate-fade-up delay-2 leading-relaxed text-balance">
-              The ultimate list of public Lavalink nodes for your Discord bot. 
-              High performance, community verified, and always free.
-            </p>
-            
-            <div className="flex flex-wrap items-center justify-center gap-4 animate-fade-up delay-3">
-               <Link 
+
+            <div className="animate-reveal flex flex-col sm:flex-row items-center justify-center gap-6" style={{ animationDelay: '200ms' }}>
+              <Link
                 href="/submit"
-                className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-white/90 transition-all flex items-center gap-2"
-               >
-                 <Plus size={20} /> Add Your Node
-               </Link>
-               <Link 
-                href="/ssl"
-                className="px-8 py-4 glass-card font-bold rounded-full hover:bg-white/5 transition-all flex items-center gap-2"
-               >
-                 Explore Nodes <ArrowRight size={20} />
-               </Link>
+                className="group inline-flex items-center gap-4 bg-blue-500 border-2 border-blue-500 text-black font-black text-xl tracking-widest uppercase px-12 py-6 transition-all shadow-[8px_8px_0px_0px_#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[16px_16px_0px_0px_#f4f4f5]"
+              >
+                <Plus size={24} />
+                ADD NODE
+                <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+              </Link>
+
+              <button
+                onClick={() => document.getElementById('nodes-section').scrollIntoView({ behavior: 'smooth' })}
+                className="group inline-flex items-center gap-4 bg-[#09090b] border-2 border-[#27272a] text-[#a1a1aa] font-black text-xl tracking-widest uppercase px-12 py-6 transition-all hover:border-white hover:text-white hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[16px_16px_0px_0px_#3b82f6]"
+              >
+                <Search size={24} />
+                BROWSE NODES
+              </button>
             </div>
           </div>
+        </section>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto mb-32 animate-fade-up" style={{ animationDelay: '0.4s' }}>
-            {stats.map((stat, i) => (
-                <div key={i} className="glass-card p-8 group hover:border-white/20 transition-all duration-500 relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <stat.icon size={20} className="mb-4 text-white/40 group-hover:text-white transition-colors relative z-10" />
-                    <div className="text-3xl font-black tabular-nums tracking-tighter mb-1 relative z-10">
-                        <AnimatedNumber value={stat.value} />{stat.suffix}
-                    </div>
-                    <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/40 relative z-10">
-                        {stat.label}
-                    </div>
-                    {/* Accent glow on hover */}
-                    <div 
-                        className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-500 opacity-0 group-hover:opacity-100" 
-                        style={{ background: `linear-gradient(90deg, transparent, ${stat.color}, transparent)` }}
-                    />
-                </div>
-            ))}
-          </div>
-
-          {/* Featured Nodes / Search */}
+        {/* Stats Section */}
+        <section className="py-24 px-6 bg-[#09090b]">
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row items-end justify-between gap-8 mb-12 border-b border-white/10 pb-12">
-                <div className="max-w-md">
-                    <h2 className="text-3xl font-bold tracking-tight mb-4 italic">Featured Nodes</h2>
-                    <p className="text-white/40 text-sm">
-                        Showing some of our top performing community nodes. 
-                        Search for specific providers or locations.
-                    </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {stats.map((stat, i) => (
+                <div key={i} className="animate-reveal bg-[#000000] border-2 border-[#27272a] p-8 text-center hover:border-blue-500 transition-colors" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className={`w-16 h-16 bg-${stat.color}-500 text-black flex items-center justify-center mx-auto mb-6 border-2 border-transparent shadow-[4px_4px_0px_0px_#f4f4f5]`}>
+                    <stat.icon size={32} />
+                  </div>
+                  <div className="text-4xl font-black text-white mb-2">
+                    {stat.value}{stat.suffix || ''}
+                  </div>
+                  <div className="text-xs font-black text-[#a1a1aa] uppercase tracking-widest">
+                    {stat.label.replace(/_/g, ' ')}
+                  </div>
                 </div>
-                <div className="relative w-full md:w-80">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search identification..." 
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full h-14 bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 text-sm outline-none focus:border-white/20 transition-all hover:bg-white/[0.07]"
-                    />
-                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Nodes Section */}
+        <section id="nodes-section" className="py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-black text-white mb-4">ACTIVE NODES</h2>
+              <p className="text-xl text-[#a1a1aa] uppercase tracking-widest">BROWSE COMMUNITY-HOSTED LAVALINK SERVERS</p>
             </div>
 
-            {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-                    {[1,2,3,4,5,6].map(i => (
-                        <div key={i} className="h-64 bg-white/5 animate-pulse" />
-                    ))}
-                </div>
-            ) : (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-                        {filteredNodes.map(node => (
-                            <NodeCard 
-                                key={node.identifier} 
-                                node={node} 
-                                onClick={(n) => setSelectedNode(n)}
-                            />
-                        ))}
-                    </div>
-                    
-                    <div className="mt-16 text-center">
+            {/* Search and Filter */}
+            <div className="mb-12 flex flex-col lg:flex-row gap-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#52525b]" size={20} />
+                <input
+                  type="text"
+                  placeholder="SEARCH NODES..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-[#09090b] border-2 border-[#27272a] text-white pl-12 pr-4 py-4 font-black uppercase tracking-widest placeholder-[#52525b] focus:border-blue-500 outline-none"
+                />
+              </div>
 
-                        <Link href="/ssl" className="inline-flex items-center gap-2 group text-white/40 hover:text-white transition-colors font-medium">
-                            View All Lavalink Nodes 
-                            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                    </div>
-                </>
+              <select
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value)}
+                className="bg-[#09090b] border-2 border-[#27272a] text-white px-6 py-4 font-black uppercase tracking-widest focus:border-blue-500 outline-none cursor-pointer"
+              >
+                {availableRegions.map(region => (
+                  <option key={region} value={region}>{region}</option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => fetchNodes(true)}
+                className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] text-[#a1a1aa] hover:border-white hover:text-white px-6 py-4 font-black uppercase tracking-widest transition-all"
+              >
+                <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                REFRESH
+              </button>
+            </div>
+
+            {/* Node Grid */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 size={48} className="animate-spin text-blue-500" />
+              </div>
+            ) : filteredNodes.length === 0 ? (
+              <div className="text-center py-20">
+                <Server size={48} className="mx-auto text-[#52525b] mb-4" />
+                <p className="text-xl text-[#a1a1aa] font-black uppercase tracking-widest">NO NODES FOUND</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredNodes.map((node, i) => (
+                  <NodeCard
+                    key={node._id || `${node.host}:${node.port}`}
+                    node={node}
+                    onClick={() => setSelectedNode(node)}
+                    style={{ animationDelay: `${i * 100}ms` }}
+                  />
+                ))}
+              </div>
             )}
           </div>
+        </section>
 
-
-          {/* Tools & Utilities Section */}
-          <div className="max-w-6xl mx-auto mt-40">
-             <div className="flex flex-col md:flex-row items-end justify-between gap-8 mb-12 border-b border-white/10 pb-12">
-                <div className="max-w-md">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-[10px] font-black uppercase tracking-widest text-purple-400 mb-4">
-                        Developer Tools
-                    </div>
-                    <h2 className="text-4xl font-black tracking-tighter mb-4 italic leading-none">Power Up Your Bot</h2>
-                    <p className="text-white/40 text-sm">
-                        Use our internal tools to verify node health or generate 
-                        configuration files for your music bot in seconds.
-                    </p>
-                </div>
+        {/* Features Section */}
+        <section className="py-24 px-6 bg-[#09090b]">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-black text-white mb-4">WHY CHOOSE GRID</h2>
+              <p className="text-xl text-[#a1a1aa] uppercase tracking-widest">ENTERPRISE-GRADE FEATURES FOR FREE</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-                <NodeCheckerTool />
-                <ConfigGeneratorTool />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {EXTENDED_FEATURES.map((feature, i) => (
+                <div key={i} className="animate-reveal bg-[#000000] border-2 border-[#27272a] p-8 hover:border-blue-500 transition-colors" style={{ animationDelay: `${i * 100}ms` }}>
+                  <div className={`w-12 h-12 bg-${feature.color}-500 text-black flex items-center justify-center mb-6 border-2 border-transparent shadow-[4px_4px_0px_0px_#f4f4f5]`}>
+                    <feature.icon size={24} />
+                  </div>
+                  <h3 className="text-xl font-black text-white mb-4">{feature.title.replace(/_/g, ' ')}</h3>
+                  <p className="text-[#a1a1aa] text-sm leading-relaxed">{feature.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
+        </section>
 
-          {/* New Content Sections */}
+        {/* Code Examples Section */}
+        <section className="py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-black text-white mb-4">INTEGRATION EXAMPLES</h2>
+              <p className="text-xl text-[#a1a1aa] uppercase tracking-widest">QUICK SETUP FOR POPULAR LIBRARIES</p>
+            </div>
 
-          <div className="max-w-6xl mx-auto mt-40 space-y-40">
-             {/* Why Public Nodes? */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-                <div className="space-y-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-bold text-blue-400">
-                        <Zap size={14} /> Performance First
-                    </div>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-none">
-                        Why use <span className="text-blue-500">Public Nodes?</span>
-                    </h2>
-                    <p className="text-white/40 leading-relaxed text-lg">
-                        Setting up your own Lavalink server can be expensive and time-consuming. 
-                        Our community directory provides you with tested, high-quality nodes 
-                        that you can plug into your Discord bot instantly.
-                    </p>
-                    <ul className="space-y-4">
-                        {[
-                            { title: "No Infrastructure Costs", desc: "Use our community power without paying for VPS.", icon: Shield },
-                            { title: "Global Latency Control", desc: "Choose nodes closest to your Discord region.", icon: Globe },
-                            { title: "Automated Verification", desc: "We track uptime and status 24/7.", icon: Activity }
-                        ].map((item, i) => (
-                            <li key={i} className="flex gap-4">
-                                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                                    <item.icon size={18} className="text-blue-500" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-white mb-1 uppercase tracking-widest text-[10px]">{item.title}</h4>
-                                    <p className="text-sm text-white/30">{item.desc}</p>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div className="glass-card rounded-3xl p-1 aspect-square overflow-hidden relative group">
-                     {/* Placeholder for an interface graphic */}
-                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 mix-blend-overlay group-hover:scale-110 transition-transform duration-700" />
-                     <div className="h-full w-full bg-[#0a0a0a] flex items-center justify-center">
-                        <pre className="text-[10px] text-white/20 font-mono leading-relaxed">
-                            {`{
-  "identifier": "Main-Node",
-  "password": "youshallnotpass",
-  "host": "node1.lavalink.net",
-  "port": 2333,
-  "secure": false
-}`}
-                        </pre>
-                     </div>
-                </div>
-             </div>
+            <div className="bg-[#09090b] border-2 border-[#27272a] p-8">
+              <div className="flex flex-wrap gap-4 mb-8">
+                {CODE_SNIPPETS.map((snippet, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveCodeTab(i)}
+                    className={`px-6 py-3 font-black uppercase tracking-widest text-sm transition-all ${activeCodeTab === i
+                        ? 'bg-blue-500 text-black border-2 border-blue-500'
+                        : 'bg-[#000000] text-[#a1a1aa] border-2 border-[#27272a] hover:border-white hover:text-white'
+                      }`}
+                  >
+                    {snippet.language}
+                  </button>
+                ))}
+              </div>
 
-             {/* FAQ Section */}
-             <div className="space-y-16">
-                <div className="text-center">
-                    <h2 className="text-4xl font-black tracking-tighter mb-4">Frequently Asked Questions</h2>
-                    <p className="text-white/40">Everything you need to know about using our nodes.</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {[
-                        { q: "Is it really free?", a: "Yes. All nodes in this directory are community-hosted and free to use for any Discord bot. Some providers might have rate limits for large bots." },
-                        { q: "How do I add my node?", a: "Click the 'Add Your Node' button at the top of the page. Fill in your details, and our admins will review it within 24 hours." },
-                        { q: "Which version of Lavalink works?", a: "Most nodes support Lavalink v4. You can see the specific version on the node card or in the detailed view." },
-                        { q: "Can I use these for large bots?", a: "Public nodes are perfect for small to medium bots. For very large bots with thousands of guilds, we recommend having a failover system or your own node." }
-                    ].map((faq, i) => (
-                        <div key={i} className="glass-card p-8 group hover:bg-white/[0.05] transition-all duration-300">
-                             <h4 className="text-white font-bold mb-3 flex items-center gap-3">
-                                <span className="text-blue-500">Q.</span> {faq.q}
-                             </h4>
-                             <p className="text-sm text-white/40 leading-relaxed pl-7 border-l border-white/10 group-hover:border-blue-500/50 transition-colors">
-                                {faq.a}
-                             </p>
-                        </div>
-                    ))}
-                </div>
-             </div>
+              <div className="bg-[#000000] border-2 border-[#27272a] p-6 overflow-x-auto">
+                <pre className="text-sm text-[#a1a1aa] font-mono">
+                  <code>{CODE_SNIPPETS[activeCodeTab].code}</code>
+                </pre>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="py-24 px-6 bg-[#09090b]">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-5xl font-black text-white mb-4">FREQUENTLY ASKED QUESTIONS</h2>
+              <p className="text-xl text-[#a1a1aa] uppercase tracking-widest">EVERYTHING YOU NEED TO KNOW</p>
+            </div>
+
+            <div className="space-y-6">
+              {FAQS.map((faq, i) => (
+                <div key={i} className="animate-reveal bg-[#000000] border-2 border-[#27272a] p-8 hover:border-blue-500 transition-colors" style={{ animationDelay: `${i * 50}ms` }}>
+                  <div className="flex items-start gap-6">
+                    <div className={`w-12 h-12 bg-${faq.color}-500 text-black flex items-center justify-center flex-shrink-0 border-2 border-transparent shadow-[4px_4px_0px_0px_#f4f4f5]`}>
+                      <faq.icon size={20} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-black text-white mb-4">{faq.q.replace(/_/g, ' ')}</h3>
+                      <p className="text-[#a1a1aa] leading-relaxed">{faq.a}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Node Details Dialog */}
+      <NodeDetailsDialog
+        node={selectedNode}
+        open={!!selectedNode}
+        onOpenChange={(open) => !open && setSelectedNode(null)}
+      />
 
       <Footer />
     </div>
   );
-}
+}

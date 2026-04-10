@@ -117,15 +117,6 @@
         "status": "approved"
     },
     {
-        "identifier": "Nexcloud v4",
-        "host": "n3.nexcloud.in",
-        "port": 2026,
-        "password": "nexcloud",
-        "secure": false,
-        "restVersion": "v4",
-        "status": "approved"
-    },
-    {
         "identifier": "VexaNode Lavalink v4",
         "host": "omega.vexanode.cloud",
         "port": 2031,

@@ -1,13 +1,33 @@
 {
-    "compilerOptions": {
-        "paths": {
-            "@/*": [
-                "./*"
-            ]
-        }
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
     },
-    "exclude": [
-        "node_modules",
-        ".next"
-    ]
+    "moduleResolution": "node",
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "es6"],
+    "strict": false,
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "out"
+  ]
 }

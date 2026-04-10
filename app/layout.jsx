@@ -2,6 +2,13 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NodesProvider } from "@/contexts/NodesContext";
+import { Orbitron } from "next/font/google";
+
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  variable: '--font-orbitron',
+  weight: ['400', '700', '900']
+});
 
 export const metadata = {
     title: "Lavalink List — Free Public Lavalink Nodes",
@@ -15,7 +22,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className="font-sans antialiased">
+            <body className={`${orbitron.variable} font-orbitron antialiased`}>
                 <ThemeProvider
                     attribute="class"
                     defaultTheme="dark"
