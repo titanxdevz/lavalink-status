@@ -20,7 +20,8 @@ import {
     Zap,
     AlertTriangle,
     PlayCircle,
-    Trash2
+    Trash2,
+    Edit2
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -209,7 +210,8 @@ const getHealthStatus = (online, load, players) => {
     return { label: 'OPTIMAL_STATE', color: 'bg-emerald-500', textColor: 'text-emerald-500', border: 'border-emerald-500' };
 };
 
-export function NodeCard({ node, onClick, minimal = false }) {
+export function NodeCard({ node, onClick, onEdit,
+          onDelete, minimal = false }) {
     const { data: session } = useSession();
     const online = node.isConnected;
     const memoryData = parseMemory(node.memory);
