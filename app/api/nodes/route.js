@@ -3,13 +3,15 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import dns from 'node:dns';
 import { notifyNodeSubmission, notifyNodeStatusChange, notifyNodeDeletion } from '@/lib/discord';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 // Force prioritize IPv4 over IPv6 to fix connectivity issues on localhost
 dns.setDefaultResultOrder('ipv4first');
 
 async function getNodesCollection() {
     const client = await clientPromise;
-    const db = client.db("lavalink-list");
+    const db = client.db();
     return db.collection("nodes");
 }
 
@@ -137,6 +139,19 @@ export async function GET(request) {
 
 export async function POST(request) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session) {
+            return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db();
+        const user = await db.collection("users").findOne({ _id: new ObjectId(session.user.id) });
+        
+        if (user?.isBanned) {
+            return NextResponse.json({ error: "Access denied. Your account is currently suspended from infrastructure deployment." }, { status: 403 });
+        }
+
         const body = await request.json();
         const { identifier, host, port, password, secure, restVersion, authorId, website, discord } = body;
 
@@ -152,7 +167,8 @@ export async function POST(request) {
             password,
             secure: !!secure,
             restVersion: restVersion || "v4",
-            authorId: authorId || "Anonymous",
+            authorId: authorId || session.user.name || "Anonymous",
+            ownerId: session.user.id, // Save the owner's Discord ID
             website: website || null,
             discord: discord || null,
             status: "pending",
@@ -176,6 +192,7 @@ export async function POST(request) {
 
 export async function PATCH(request) {
     try {
+        const session = await getServerSession(authOptions);
         const body = await request.json();
         const { _id, host, port, ...updates } = body;
 
@@ -191,14 +208,21 @@ export async function PATCH(request) {
             query = { host: host, port: parseInt(port) };
         }
 
-        if (updates.port !== undefined) {
-             updates.port = parseInt(updates.port);
-        }
-
-        // Get the current node data before updating to check for status changes
         const currentNode = await collection.findOne(query);
         if (!currentNode) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
+        }
+
+        const adminPass = request.headers.get("X-Admin-Password");
+        const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
+        const isOwner = session && session.user.id === currentNode.ownerId;
+        
+        if (!isAdmin && !isOwner && updates.status === undefined) {
+             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
+
+        if (updates.port !== undefined) {
+             updates.port = parseInt(updates.port);
         }
 
         const oldStatus = currentNode.status;
@@ -211,7 +235,6 @@ export async function PATCH(request) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
-        // Send Discord notification if status changed
         if (oldStatus !== newStatus && (newStatus === 'approved' || newStatus === 'rejected')) {
             const updatedNode = { ...currentNode, ...updates, _id: currentNode._id.toString() };
             await notifyNodeStatusChange(updatedNode, oldStatus, newStatus, reason);
@@ -225,32 +248,38 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
     try {
+        const session = await getServerSession(authOptions);
         const { searchParams } = new URL(request.url);
         const host = searchParams.get('host');
         const port = searchParams.get('port');
+        const id = searchParams.get('id');
 
-        if (!host || !port) {
+        if (!id && (!host || !port)) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
         const collection = await getNodesCollection();
+        const query = id ? { _id: new ObjectId(id) } : { host: host, port: parseInt(port) };
         
-        // Get the node data before deletion for notification
-        const nodeToDelete = await collection.findOne({ 
-            host: host, 
-            port: parseInt(port) 
-        });
+        const nodeToDelete = await collection.findOne(query);
+        if (!nodeToDelete) {
+            return NextResponse.json({ error: "Node not found" }, { status: 404 });
+        }
 
-        const result = await collection.deleteOne({ 
-            host: host, 
-            port: parseInt(port) 
-        });
+        const adminPass = request.headers.get("X-Admin-Password");
+        const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
+        const isOwner = session && session.user.id === nodeToDelete.ownerId;
+        
+        if (!isAdmin && !isOwner) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
+
+        const result = await collection.deleteOne(query);
 
         if (result.deletedCount === 0) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
-        // Send Discord notification for node deletion
         if (nodeToDelete) {
             const nodeForNotification = { ...nodeToDelete, _id: nodeToDelete._id.toString() };
             await notifyNodeDeletion(nodeForNotification);

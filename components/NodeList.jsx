@@ -12,6 +12,7 @@ import {
   Wifi, Cpu, Database, Command, Layers, Network, Fingerprint,
   FileKey, ShieldAlert, CheckCircle2, AlertTriangle, LayoutGrid, List
 } from "lucide-react";
+import { SiteLoader } from "./SiteLoader";
 
 const WSS_CODE_SNIPPETS = [
   {
@@ -184,6 +185,7 @@ export function NodeList({ filterSecure, title, description, icon }) {
 
   return (
     <>
+      <SiteLoader isLoading={loading && !lastFetch} />
       <NodeDetailsDialog node={selectedNode} open={dialogOpen} onOpenChange={setDialogOpen} />
 
       <main className="relative z-10 w-full max-w-[1600px] mx-auto px-6 pt-12 pb-40">
@@ -315,16 +317,19 @@ export function NodeList({ filterSecure, title, description, icon }) {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-60 gap-8 border-4 border-[#27272a] bg-[#09090b] shadow-[16px_16px_0px_0px_#27272a]">
-            <div className="relative">
-              <Loader2 size={80} className="animate-spin text-emerald-500 relative z-10" />
-              <div className="absolute inset-0 blur-xl bg-emerald-500/30 animate-pulse"></div>
-            </div>
-            <div className="flex flex-col items-center gap-4 text-center">
-              <span className="text-white font-black tracking-widest uppercase text-3xl">NEGOTIATING_TLS_HANDSHAKES</span>
-              <span className="text-[#a1a1aa] font-bold tracking-widest text-lg border-2 border-[#27272a] px-6 py-2 bg-[#000000]">AWAITING CERTIFICATE VALIDATION...</span>
-            </div>
+        {loading && !lastFetch ? (
+          <div className={`grid gap-8 ${viewMode === "grid" ? "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"}`}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-80 bg-[#09090b] border-4 border-[#27272a] animate-pulse relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[slideRight_2s_infinite]"></div>
+                <div className="absolute top-0 left-0 w-full h-2 bg-[#27272a]"></div>
+                <div className="p-8 space-y-6">
+                  <div className="w-1/3 h-6 bg-[#27272a]"></div>
+                  <div className="w-full h-12 bg-[#27272a]"></div>
+                  <div className="w-2/3 h-4 bg-[#27272a]"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-40">

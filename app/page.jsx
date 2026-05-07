@@ -4,9 +4,12 @@ import { Footer } from "@/components/Footer";
 import { NodeCard } from "@/components/NodeCard";
 import { NodeDetailsDialog } from "@/components/NodeDetailsDialog";
 import { useNodes } from "@/contexts/NodesContext";
-import { Shield, Server, ArrowRight, Search, Activity, Users, Zap, Globe, Plus, Terminal, RefreshCw, Loader2, Code, Cpu, Database, Lock, Wifi, Check, X, ChevronRight, Play, Volume2, Music, Settings, Headphones, Layers, Command, Cpu as CpuIcon, Network, GitBranch, Clock } from "lucide-react";
+import { Shield, Server, ArrowRight, Search, Activity, Users, User, Zap, Globe, Plus, Terminal, RefreshCw, Loader2, Code, Cpu, Database, Lock, Wifi, Check, X, ChevronRight, Play, Volume2, Music, Settings, Headphones, Layers, Command, Cpu as CpuIcon, Network, GitBranch, Clock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
+import { SiteLoader } from "@/components/SiteLoader";
+import { useSession } from "next-auth/react";
+import { PromotionCard } from "@/components/PromotionCard";
 
 const CODE_SNIPPETS = [
   {
@@ -121,11 +124,13 @@ const FAQS = [
 ];
 
 export default function HomePage() {
+  const { data: session } = useSession();
   const { nodes, loading, fetchNodes, lastFetch } = useNodes();
   const [search, setSearch] = useState("");
   const [selectedNode, setSelectedNode] = useState(null);
   const [activeCodeTab, setActiveCodeTab] = useState(0);
   const [regionFilter, setRegionFilter] = useState("ALL");
+  const [showOnlyMine, setShowOnlyMine] = useState(false);
 
   const formatAge = () => {
     if (!lastFetch) return "NEVER";
@@ -158,14 +163,29 @@ export default function HomePage() {
     ];
   }, [nodes]);
 
+  const [promotions, setPromotions] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/promotions").then(res => res.json()).then(setPromotions).catch(console.error);
+  }, []);
+
   const filteredNodes = useMemo(() => {
     return nodes.filter(n => {
       const matchesSearch = n.identifier?.toLowerCase().includes(search.toLowerCase()) || n.host?.toLowerCase().includes(search.toLowerCase());
       const isOnline = n.isConnected;
       const matchesRegion = regionFilter === "ALL" || (n.region && n.region.toUpperCase() === regionFilter);
+
+      if (showOnlyMine) {
+        return n.ownerId === session?.user?.id && matchesSearch;
+      }
+
       return isOnline && matchesSearch && matchesRegion;
+    }).sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
     }).slice(0, 9);
-  }, [nodes, search, regionFilter]);
+  }, [nodes, search, regionFilter, showOnlyMine, session]);
 
   const availableRegions = useMemo(() => {
     const regions = new Set(nodes.filter(n => n.region).map(n => n.region.toUpperCase()));
@@ -211,9 +231,11 @@ export default function HomePage() {
         }
       `}</style>
 
-      <div className="fixed top-0 left-0 right-0 h-1 bg-blue-500/20 z-50 overflow-hidden">
+      <div className={`fixed top-0 left-0 right-0 h-1 bg-blue-500/20 z-[60] overflow-hidden transition-opacity duration-500 ${loading ? 'opacity-100' : 'opacity-0'}`}>
         <div className="absolute top-0 left-0 h-full bg-blue-500 w-1/3 animate-[slideRight_2s_infinite_linear]"></div>
       </div>
+
+      <SiteLoader isLoading={loading && !lastFetch} />
 
       <Navbar />
 
@@ -294,6 +316,15 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Promotions Section (if any) */}
+        {promotions.filter(p => p.type === 'ad').slice(0, 1).map((promo, idx) => (
+          <section key={idx} className="py-12 px-6">
+            <div className="max-w-6xl mx-auto">
+              <PromotionCard promotion={promo} />
+            </div>
+          </section>
+        ))}
+
         {/* Nodes Section */}
         <section id="nodes-section" className="py-24 px-6">
           <div className="max-w-6xl mx-auto">
@@ -325,6 +356,20 @@ export default function HomePage() {
                 ))}
               </select>
 
+              {session && (
+                <button
+                  onClick={() => setShowOnlyMine(!showOnlyMine)}
+                  className={`flex items-center gap-3 border-2 px-6 py-4 font-black uppercase tracking-widest transition-all ${showOnlyMine
+                    ? 'bg-blue-500 border-blue-500 text-black shadow-[4px_4px_0px_0px_#f4f4f5] -translate-y-1 -translate-x-1'
+                    : 'bg-[#09090b] border-[#27272a] text-[#a1a1aa] hover:border-white hover:text-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_#3b82f6]'
+                    }`}
+                >
+
+                  <User size={20} />
+                  {showOnlyMine ? 'VIEW ALL NODES' : 'MANAGE MY NODES'}
+                </button>
+              )}
+
               <button
                 onClick={() => fetchNodes(true)}
                 className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] text-[#a1a1aa] hover:border-white hover:text-white px-6 py-4 font-black uppercase tracking-widest transition-all"
@@ -335,9 +380,13 @@ export default function HomePage() {
             </div>
 
             {/* Node Grid */}
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 size={48} className="animate-spin text-blue-500" />
+            {loading && !lastFetch ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-64 bg-[#09090b] border-2 border-[#27272a] animate-pulse relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[slideRight_2s_infinite]"></div>
+                  </div>
+                ))}
               </div>
             ) : filteredNodes.length === 0 ? (
               <div className="text-center py-20">
@@ -396,8 +445,8 @@ export default function HomePage() {
                     key={i}
                     onClick={() => setActiveCodeTab(i)}
                     className={`px-6 py-3 font-black uppercase tracking-widest text-sm transition-all ${activeCodeTab === i
-                        ? 'bg-blue-500 text-black border-2 border-blue-500'
-                        : 'bg-[#000000] text-[#a1a1aa] border-2 border-[#27272a] hover:border-white hover:text-white'
+                      ? 'bg-blue-500 text-black border-2 border-blue-500'
+                      : 'bg-[#000000] text-[#a1a1aa] border-2 border-[#27272a] hover:border-white hover:text-white'
                       }`}
                   >
                     {snippet.language}

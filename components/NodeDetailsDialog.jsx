@@ -1,14 +1,63 @@
 "use client";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
-import { Server, Code, Clock, Copy, Check, X, Globe, Puzzle, Filter, Cpu, HardDrive, Activity, Users, Wrench } from "lucide-react";
+import { Server, Code, Clock, Copy, Check, X, Globe, Puzzle, Filter, Cpu, HardDrive, Activity, Users, Wrench, Edit2, Trash2, Save, AlertTriangle } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useNodes } from "@/contexts/NodesContext";
+import Link from "next/link";
 
 export function NodeDetailsDialog({ node, open, onOpenChange }) {
+    const { data: session } = useSession();
+    const { updateNode, deleteNode } = useNodes();
     const [copied, setCopied] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [editData, setEditData] = useState(null);
 
     if (!node) return null;
 
     const isOnline = node.isConnected;
+    const isOwner = session && session.user.id === node.ownerId;
+
+    const handleEditStart = () => {
+        setEditData({
+            identifier: node.identifier,
+            host: node.host,
+            port: node.port,
+            password: node.password,
+            secure: node.secure,
+            restVersion: node.restVersion,
+            website: node.website || "",
+            discord: node.discord || ""
+        });
+        setIsEditing(true);
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await updateNode({ _id: node._id, ...editData });
+            setIsEditing(false);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to permanently remove this node from the grid?")) return;
+        setIsDeleting(true);
+        try {
+            await deleteNode(node.host, node.port, node._id);
+            onOpenChange(false);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const copyConnectionJSON = () => {
         const json = JSON.stringify({
@@ -55,7 +104,11 @@ export function NodeDetailsDialog({ node, open, onOpenChange }) {
                             </h2>
                             <div className="flex flex-wrap items-center gap-3 text-xs font-black uppercase tracking-widest">
                                 <span className="text-[#a1a1aa] bg-[#000000] border-2 border-[#27272a] px-3 py-1">
-                                    BY <span className="text-white ml-1">{node.authorId || 'UNKNOWN'}</span>
+                                    BY {node.ownerId ? (
+                                        <Link href={`/profile/${node.ownerId}`} className="text-white hover:text-blue-500 transition-colors ml-1">{node.authorId || 'UNKNOWN'}</Link>
+                                    ) : (
+                                        <span className="text-white ml-1">{node.authorId || 'UNKNOWN'}</span>
+                                    )}
                                 </span>
                                 {node.website && (
                                     <a
@@ -81,7 +134,45 @@ export function NodeDetailsDialog({ node, open, onOpenChange }) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 self-start">
+                    <div className="flex flex-wrap items-center gap-4 self-start">
+                        {isOwner && !isEditing && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleEditStart}
+                                    className="px-4 py-2 bg-blue-500 border-2 border-blue-500 text-black text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white hover:border-white transition-all shadow-[4px_4px_0px_0px_#f4f4f5]"
+                                >
+                                    <Edit2 size={14} /> Edit Node
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={isDeleting}
+                                    className="px-4 py-2 bg-red-500 border-2 border-red-500 text-white text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white hover:text-black hover:border-white transition-all shadow-[4px_4px_0px_0px_#000]"
+                                >
+                                    {isDeleting ? <X size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                    Delete
+                                </button>
+                            </div>
+                        )}
+
+                        {isEditing && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-emerald-500 border-2 border-emerald-500 text-black text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white hover:border-white transition-all shadow-[4px_4px_0px_0px_#f4f4f5]"
+                                >
+                                    {isSaving ? <X size={14} className="animate-spin" /> : <Save size={14} />}
+                                    Save Changes
+                                </button>
+                                <button
+                                    onClick={() => setIsEditing(false)}
+                                    className="px-4 py-2 bg-transparent border-2 border-[#27272a] text-[#a1a1aa] text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:border-white hover:text-white transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
+
                         <div className={`px-4 py-2 border-2 text-xs font-black uppercase tracking-widest flex items-center gap-3 shadow-[4px_4px_0px_0px] ${isOnline ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500 shadow-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500 shadow-red-500/20'}`}>
                             <div className={`w-2 h-2 ${isOnline ? 'bg-emerald-500' : 'bg-red-500'}`} />
                             {isOnline ? 'SYS_ACTIVE' : 'SYS_OFFLINE'}
@@ -96,42 +187,137 @@ export function NodeDetailsDialog({ node, open, onOpenChange }) {
                 </div>
 
                 <div className="p-6 md:p-8 space-y-12">
+                    {isEditing ? (
+                        <div className="space-y-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Identifier</label>
+                                    <input
+                                        type="text"
+                                        value={editData.identifier}
+                                        onChange={(e) => setEditData({ ...editData, identifier: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Host Address</label>
+                                    <input
+                                        type="text"
+                                        value={editData.host}
+                                        onChange={(e) => setEditData({ ...editData, host: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Port</label>
+                                    <input
+                                        type="number"
+                                        value={editData.port}
+                                        onChange={(e) => setEditData({ ...editData, port: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors"
+                                    />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Auth Key</label>
+                                    <input
+                                        type="text"
+                                        value={editData.password}
+                                        onChange={(e) => setEditData({ ...editData, password: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Secure (SSL)</label>
+                                    <div 
+                                        onClick={() => setEditData({ ...editData, secure: !editData.secure })}
+                                        className={`px-5 py-4 border-2 font-black uppercase tracking-widest text-xs cursor-pointer transition-all flex items-center justify-between ${editData.secure ? 'bg-blue-500 text-black border-blue-500' : 'bg-[#09090b] border-[#27272a] text-[#a1a1aa]'}`}
+                                    >
+                                        {editData.secure ? 'ENABLED (WSS/HTTPS)' : 'DISABLED (WS/HTTP)'}
+                                        {editData.secure && <Check size={16} />}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">API Version</label>
+                                    <select
+                                        value={editData.restVersion}
+                                        onChange={(e) => setEditData({ ...editData, restVersion: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors appearance-none"
+                                    >
+                                        <option value="v4">LAVALINK_V4</option>
+                                        <option value="v3">LAVALINK_V3</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Website Link</label>
+                                    <input
+                                        type="url"
+                                        value={editData.website}
+                                        onChange={(e) => setEditData({ ...editData, website: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="HTTPS://..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Discord Link</label>
+                                    <input
+                                        type="url"
+                                        value={editData.discord}
+                                        onChange={(e) => setEditData({ ...editData, discord: e.target.value })}
+                                        className="w-full bg-[#09090b] border-2 border-[#27272a] px-5 py-4 text-white font-black uppercase focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="DISCORD.GG/..."
+                                    />
+                                </div>
+                            </div>
 
-                    <div>
-                        <SectionHeader icon={Server} title="Target Host" />
-                        <div className="bg-[#09090b] border-2 border-[#27272a] px-5 py-4 flex items-center justify-between group hover:border-white transition-colors">
-                            <code className="text-lg font-black text-white">{node.host}</code>
-                            <span className="text-xs font-black text-[#52525b] uppercase tracking-widest group-hover:text-blue-500 transition-colors">PORT: {node.port}</span>
+                            <div className="bg-yellow-500/10 border-2 border-yellow-500 p-6 flex items-start gap-4">
+                                <AlertTriangle className="text-yellow-500 shrink-0" size={24} />
+                                <div>
+                                    <h4 className="text-sm font-black text-white uppercase tracking-widest mb-1">Warning: Node Re-verification</h4>
+                                    <p className="text-xs font-black text-[#a1a1aa] uppercase tracking-widest leading-relaxed">
+                                        Significant changes to host or port parameters may require the node to be re-verified by an administrator.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <>
+                            <div>
+                                <SectionHeader icon={Server} title="Target Host" />
+                                <div className="bg-[#09090b] border-2 border-[#27272a] px-5 py-4 flex items-center justify-between group hover:border-white transition-colors">
+                                    <code className="text-lg font-black text-white">{node.host}</code>
+                                    <span className="text-xs font-black text-[#52525b] uppercase tracking-widest group-hover:text-blue-500 transition-colors">PORT: {node.port}</span>
+                                </div>
+                            </div>
 
-                    <div>
-                        <SectionHeader icon={Code} title="Connection Parameters" />
-                        <div className="bg-[#09090b] border-2 border-[#27272a] relative group hover:border-white transition-colors">
-                            <button
-                                onClick={copyConnectionJSON}
-                                className={`absolute top-4 right-4 flex items-center gap-2 px-4 py-2 border-2 text-xs font-black uppercase tracking-widest transition-all z-10 ${copied
-                                    ? 'bg-emerald-500 text-black border-emerald-500'
-                                    : 'bg-[#000000] text-[#a1a1aa] border-[#27272a] hover:border-white hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0px_0px_#ffffff]'
-                                    }`}
-                            >
-                                {copied ? <Check size={14} /> : <Copy size={14} />}
-                                {copied ? 'COPIED' : 'COPY JSON'}
-                            </button>
-                            <pre 
-                                className="text-sm text-[#a1a1aa] p-6 overflow-x-auto"
-                                dangerouslySetInnerHTML={{
-                                    __html: `{
+                            <div>
+                                <SectionHeader icon={Code} title="Connection Parameters" />
+                                <div className="bg-[#09090b] border-2 border-[#27272a] relative group hover:border-white transition-colors">
+                                    <button
+                                        onClick={copyConnectionJSON}
+                                        className={`absolute top-4 right-4 flex items-center gap-2 px-4 py-2 border-2 text-xs font-black uppercase tracking-widest transition-all z-10 ${copied
+                                            ? 'bg-emerald-500 text-black border-emerald-500'
+                                            : 'bg-[#000000] text-[#a1a1aa] border-[#27272a] hover:border-white hover:text-white hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0px_0px_#ffffff]'
+                                            }`}
+                                    >
+                                        {copied ? <Check size={14} /> : <Copy size={14} />}
+                                        {copied ? 'COPIED' : 'COPY JSON'}
+                                    </button>
+                                    <pre 
+                                        className="text-sm text-[#a1a1aa] p-6 overflow-x-auto"
+                                        dangerouslySetInnerHTML={{
+                                            __html: `{
   "identifier": "${node.identifier}",
   "password": <span class="credential-text">${node.password || 'youshallnotpass'}</span>,
   "host": "${node.host}",
   "port": ${node.port},
   "secure": ${node.secure}
 }`
-                                }}
-                            />
-                        </div>
-                    </div>
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {isOnline && (
                         <>

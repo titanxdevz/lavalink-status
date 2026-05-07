@@ -19,8 +19,11 @@ import {
     Music,
     Zap,
     AlertTriangle,
-    PlayCircle
+    PlayCircle,
+    Trash2
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 const generateSparklineData = (seedStr, count = 20) => {
     let seed = 0;
@@ -207,6 +210,7 @@ const getHealthStatus = (online, load, players) => {
 };
 
 export function NodeCard({ node, onClick, minimal = false }) {
+    const { data: session } = useSession();
     const online = node.isConnected;
     const memoryData = parseMemory(node.memory);
     const loadValue = parseLoad(node.systemLoad);
@@ -214,6 +218,7 @@ export function NodeCard({ node, onClick, minimal = false }) {
     const health = getHealthStatus(online, loadValue, playerCount);
     const sparklineData = useMemo(() => generateSparklineData(node.identifier || 'node', 30), [node.identifier]);
     const isSecure = node.secure === true || (node.host && node.host.includes('443'));
+    const isOwner = session && session.user.id === node.ownerId;
 
     if (minimal) {
         return (
@@ -266,11 +271,20 @@ export function NodeCard({ node, onClick, minimal = false }) {
 
             <div className="p-6 flex flex-col h-full relative z-10">
                 <div className="flex items-center justify-between mb-4 border-b-2 border-[#27272a] pb-4">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 border-2 ${health.border} bg-[#000000]`}>
-                        <div className={`w-2 h-2 ${health.color} ${online ? 'animate-pulse shadow-[0_0_8px_currentColor]' : ''}`} />
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${health.textColor}`}>
-                            {health.label}
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 border-2 ${health.border} bg-[#000000]`}>
+                            <div className={`w-2 h-2 ${health.color} ${online ? 'animate-pulse shadow-[0_0_8px_currentColor]' : ''}`} />
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${health.textColor}`}>
+                                {health.label}
+                            </span>
+                        </div>
+                        {isOwner && (
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 border-2 border-blue-500 bg-blue-500 text-black">
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    YOUR_NODE
+                                </span>
+                            </div>
+                        )}
                     </div>
                     
                     <div className="flex items-center gap-3 text-[#52525b]">
@@ -383,24 +397,62 @@ export function NodeCard({ node, onClick, minimal = false }) {
                     </div>
                 )}
 
-                <div className="mt-auto flex items-center justify-between pt-5 border-t-2 border-[#27272a]">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 border-2 border-[#27272a] bg-[#000000] flex items-center justify-center text-lg font-black text-white group-hover:border-blue-500 group-hover:bg-blue-500/10 transition-colors relative overflow-hidden">
-                            <span className="relative z-10">{node.authorId?.charAt(0).toUpperCase() || '?'}</span>
-                            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] pointer-events-none"></div>
+                <div className="mt-auto flex items-center justify-between pt-5 border-t-2 border-[#27272a] gap-4">
+                    {onEdit && onDelete ? (
+                        <div className="flex items-center gap-2 flex-1">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onEdit(node); }}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-[#09090b] border-2 border-[#27272a] text-[#a1a1aa] hover:border-blue-500 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_#1a1a1a] hover:-translate-y-0.5 hover:-translate-x-0.5"
+                            >
+                                <Edit2 size={14} /> EDIT
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onDelete(node); }}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-[#09090b] border-2 border-[#27272a] text-red-500/70 hover:border-red-500 hover:text-red-500 transition-all text-[10px] font-black uppercase tracking-widest shadow-[4px_4px_0px_0px_#1a1a1a] hover:-translate-y-0.5 hover:-translate-x-0.5"
+                            >
+                                <Trash2 size={14} /> PURGE
+                            </button>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[9px] uppercase tracking-widest text-[#52525b] font-black flex items-center gap-1.5">
-                                <Server size={10} /> INFRA_PROVIDER
-                            </span>
-                            <span className="text-sm font-black text-white uppercase truncate max-w-[140px] tracking-wide">
-                                {node.authorId || 'COMMUNITY_HOSTED'}
-                            </span>
+                    ) : node.ownerId ? (
+                        <Link 
+                            href={`/profile/${node.ownerId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-4 group/operator hover:bg-blue-500/5 p-2 -m-2 transition-colors border-2 border-transparent hover:border-blue-500/20"
+                        >
+                            <div className="w-12 h-12 border-2 border-[#27272a] bg-[#000000] flex items-center justify-center text-lg font-black text-white group-hover/operator:border-blue-500 group-hover/operator:bg-blue-500/10 transition-colors relative overflow-hidden">
+                                <span className="relative z-10">{node.authorId?.charAt(0).toUpperCase() || '?'}</span>
+                                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] pointer-events-none"></div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[9px] uppercase tracking-widest text-[#52525b] font-black flex items-center gap-1.5">
+                                    <Server size={10} /> INFRA_PROVIDER
+                                </span>
+                                <span className="text-sm font-black text-white uppercase truncate max-w-[140px] tracking-wide group-hover/operator:text-blue-500 transition-colors">
+                                    {node.authorId || 'COMMUNITY_HOSTED'}
+                                </span>
+                            </div>
+                        </Link>
+                    ) : (
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 border-2 border-[#27272a] bg-[#000000] flex items-center justify-center text-lg font-black text-white relative overflow-hidden">
+                                <span className="relative z-10">{node.authorId?.charAt(0).toUpperCase() || '?'}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[9px] uppercase tracking-widest text-[#52525b] font-black flex items-center gap-1.5">
+                                    <Server size={10} /> INFRA_PROVIDER
+                                </span>
+                                <span className="text-sm font-black text-white uppercase truncate max-w-[140px] tracking-wide">
+                                    {node.authorId || 'COMMUNITY_HOSTED'}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                    <div className="w-12 h-12 flex items-center justify-center border-2 border-[#27272a] bg-[#000000] text-[#a1a1aa] group-hover:bg-blue-500 group-hover:text-black group-hover:border-blue-500 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0)] group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]">
-                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                    </div>
+                    )}
+                    
+                    {!onEdit && (
+                        <div className="w-12 h-12 flex items-center justify-center border-2 border-[#27272a] bg-[#000000] text-[#a1a1aa] group-hover:bg-blue-500 group-hover:text-black group-hover:border-blue-500 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0)] group-hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)]">
+                            <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

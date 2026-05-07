@@ -2,14 +2,16 @@
 import { useState } from "react";
 import {
     Server, Shield, Globe, MessageSquare,
-    Lock, Hash, User, ArrowRight, Loader2, Tag, ChevronLeft, Check, Terminal, Cpu
+    Lock, Hash, User, ArrowRight, Loader2, Tag, ChevronLeft, Check, Terminal, Cpu, LogIn
 } from "lucide-react";
 import { useNodes } from "@/contexts/NodesContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import Link from "next/link";
+import { useSession, signIn } from "next-auth/react";
 
 export default function SubmitPage() {
+    const { data: session, status } = useSession();
     const { submitNode } = useNodes();
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -99,7 +101,23 @@ export default function SubmitPage() {
                     </p>
                 </div>
 
-                {success ? (
+                {!session ? (
+                    <div className="animate-reveal bg-[#09090b] border-4 border-[#27272a] p-12 text-center shadow-[16px_16px_0px_0px_#3b82f6]">
+                        <div className="w-20 h-20 bg-blue-500 text-black flex items-center justify-center mx-auto mb-8 border-2 border-transparent shadow-[6px_6px_0px_0px_#f4f4f5]">
+                            <Lock size={32} />
+                        </div>
+                        <h2 className="text-4xl font-black uppercase tracking-tighter text-white mb-6">Authentication Required</h2>
+                        <p className="text-[#a1a1aa] text-lg font-black uppercase tracking-widest mb-10 max-w-lg mx-auto">
+                            To prevent spam and ensure node accountability, you must authenticate with your Discord account before submitting a node.
+                        </p>
+                        <button
+                            onClick={() => signIn('discord')}
+                            className="inline-flex items-center gap-4 bg-blue-500 border-2 border-blue-500 text-black font-black text-xl tracking-widest uppercase px-10 py-5 transition-all shadow-[8px_8px_0px_0px_#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[16px_16px_0px_0px_#f4f4f5]"
+                        >
+                            <LogIn size={24} /> INITIALIZE DISCORD AUTH
+                        </button>
+                    </div>
+                ) : success ? (
                     <>
                         <div className="animate-reveal bg-[#09090b] border-2 border-emerald-500 p-12 text-center shadow-[12px_12px_0px_0px_#10b981]">
                             <div className="w-24 h-24 bg-emerald-500 text-black flex items-center justify-center mx-auto mb-8 border-4 border-[#000000] shadow-[8px_8px_0px_0px_#f4f4f5]">

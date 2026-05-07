@@ -3,7 +3,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NodesProvider } from "@/contexts/NodesContext";
+import { SessionProviderWrapper } from "@/components/SessionProviderWrapper";
 import { Orbitron } from "next/font/google";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 const orbitron = Orbitron({
   subsets: ['latin'],
@@ -47,9 +49,12 @@ export default function RootLayout({ children }) {
           enableSystem
           disableTransitionOnChange
         >
-          <NodesProvider>
-            {children}
-          </NodesProvider>
+          <SessionProviderWrapper>
+            <NodesProvider>
+              <AnnouncementBanner />
+              {children}
+            </NodesProvider>
+          </SessionProviderWrapper>
           <Analytics />
         </ThemeProvider>
       </body>

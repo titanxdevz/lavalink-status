@@ -74,13 +74,28 @@ export function NodesProvider({ children }) {
         return await res.json();
     };
 
+    const updateNode = async (nodeData) => {
+        const res = await fetch("/api/nodes", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nodeData)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        fetchNodes(true);
+        return await res.json();
+    };
+
     const updateNodeStatus = async (host, port, status, reason = null) => {
         const body = { host, port, status };
         if (reason) body.reason = reason;
         
+        const headers = { "Content-Type": "application/json" };
+        const adminAuth = typeof window !== 'undefined' ? sessionStorage.getItem("admin_password") : null;
+        if (adminAuth) headers["X-Admin-Password"] = adminAuth;
+
         const res = await fetch("/api/nodes", {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify(body)
         });
         if (!res.ok) throw new Error(await res.text());
@@ -88,9 +103,16 @@ export function NodesProvider({ children }) {
         return await res.json();
     };
 
-    const deleteNode = async (host, port) => {
-        const res = await fetch(`/api/nodes?host=${host}&port=${port}`, {
-            method: "DELETE"
+    const deleteNode = async (host, port, id = null) => {
+        const url = id ? `/api/nodes?id=${id}` : `/api/nodes?host=${host}&port=${port}`;
+        
+        const headers = {};
+        const adminAuth = typeof window !== 'undefined' ? sessionStorage.getItem("admin_password") : null;
+        if (adminAuth) headers["X-Admin-Password"] = adminAuth;
+
+        const res = await fetch(url, {
+            method: "DELETE",
+            headers: headers
         });
         if (!res.ok) throw new Error(await res.text());
         fetchNodes(true);
@@ -100,7 +122,7 @@ export function NodesProvider({ children }) {
     return (
         <NodesContext.Provider value={{ 
             nodes, loading, error, fetchNodes, lastFetch,
-            submitNode, updateNodeStatus, deleteNode 
+            submitNode, updateNode, updateNodeStatus, deleteNode 
         }}>
             {children}
         </NodesContext.Provider>

@@ -1,12 +1,17 @@
+"use client";
 import Link from "next/link";
-import { Plus, Home, Shield, Server, Menu, X, Settings } from "lucide-react";
+import { Plus, Home, Shield, Server, Menu, X, Settings, LogIn, LogOut, User, Trophy } from "lucide-react";
 import { useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 export function Navbar({ activeTab }) {
+    const { data: session } = useSession();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
     const navItems = [
         { id: 'home', path: '/', label: 'Home', icon: Home },
+        { id: 'leaderboard', path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
         { id: 'ssl', path: '/ssl', label: 'SSL Nodes', icon: Shield },
         { id: 'non-ssl', path: '/non-ssl', label: 'Non-SSL', icon: Server },
         { id: 'submit', path: '/submit', label: 'Add Node', icon: Plus }
@@ -46,7 +51,53 @@ export function Navbar({ activeTab }) {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="hidden md:flex items-center">
+                    <div className="hidden md:flex items-center gap-4">
+                        {session ? (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                    className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] hover:border-blue-500 px-4 py-2 transition-all shadow-[4px_4px_0px_0px_#27272a] hover:shadow-[4px_4px_0px_0px_#3b82f6] group"
+                                >
+                                    {session.user.image ? (
+                                        <img src={session.user.image} alt="User" className="w-8 h-8 rounded-none border border-[#27272a] group-hover:border-white" />
+                                    ) : (
+                                        <div className="w-8 h-8 bg-blue-500 flex items-center justify-center text-black">
+                                            <User size={16} />
+                                        </div>
+                                    )}
+                                    <span className="text-white text-xs font-black tracking-widest">{session.user.name?.toUpperCase()}</span>
+                                </button>
+
+                                {isUserMenuOpen && (
+                                    <div className="absolute right-0 mt-4 w-64 bg-[#09090b] border-4 border-[#27272a] p-2 shadow-[12px_12px_0px_0px_#000] animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="p-4 border-b-2 border-[#27272a] mb-2">
+                                            <div className="text-[10px] text-[#52525b] font-black uppercase tracking-widest mb-1">Authenticated as</div>
+                                            <div className="text-white font-black uppercase truncate">{session.user.email}</div>
+                                        </div>
+                                        <Link
+                                            href={`/profile/${session.user.id}`}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-[#a1a1aa] hover:bg-blue-500/10 hover:text-blue-400 font-black uppercase tracking-widest text-xs transition-colors text-left"
+                                            onClick={() => setIsUserMenuOpen(false)}
+                                        >
+                                            <User size={16} /> View Profile
+                                        </Link>
+                                        <button
+                                            onClick={() => signOut()}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-black uppercase tracking-widest text-xs transition-colors text-left"
+                                        >
+                                            <LogOut size={16} /> Terminate Session
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => signIn('discord')}
+                                className="flex items-center gap-3 bg-blue-500 border-2 border-blue-500 text-black px-6 py-3 font-black text-xs tracking-widest uppercase transition-all shadow-[4px_4px_0px_0px_#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_#f4f4f5]"
+                            >
+                                <LogIn size={18} /> Initialize Login
+                            </button>
+                        )}
                     </div>
 
                     <button
@@ -76,6 +127,24 @@ export function Navbar({ activeTab }) {
                             </Link>
                         );
                     })}
+
+                    <div className="pt-4 mt-4 border-t-2 border-[#27272a]">
+                        {session ? (
+                            <button
+                                onClick={() => signOut()}
+                                className="w-full flex items-center gap-4 px-6 py-4 border-2 border-red-500/50 text-red-500 font-black uppercase tracking-widest text-sm transition-all hover:bg-red-500 hover:text-black"
+                            >
+                                <LogOut size={20} /> Terminate Session
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => signIn('discord')}
+                                className="w-full flex items-center gap-4 px-6 py-4 border-2 border-blue-500 text-blue-500 font-black uppercase tracking-widest text-sm transition-all hover:bg-blue-500 hover:text-black"
+                            >
+                                <LogIn size={20} /> Initialize Login
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
         </nav>
