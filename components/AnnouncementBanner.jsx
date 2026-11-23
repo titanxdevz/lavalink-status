@@ -1,6 +1,7 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { X, Megaphone, ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowUpRight, Megaphone, X } from "lucide-react";
 
 export function AnnouncementBanner() {
     const [announcement, setAnnouncement] = useState(null);
@@ -9,51 +10,55 @@ export function AnnouncementBanner() {
     useEffect(() => {
         const fetchAnnouncements = async () => {
             try {
-                const res = await fetch("/api/promotions");
-                const data = await res.json();
-                const activeAnn = data.find(p => p.type === "announcement" && p.isActive);
-                if (activeAnn) setAnnouncement(activeAnn);
-            } catch (e) {
-                console.error(e);
+                const response = await fetch("/api/promotions");
+                const data = await response.json();
+                if (!Array.isArray(data)) return;
+                const active = data.find(
+                    (item) => item.type === "announcement" && item.isActive
+                );
+                if (active) setAnnouncement(active);
+            } catch {
+                // Announcements are optional.
             }
         };
+
         fetchAnnouncements();
     }, []);
 
     if (!announcement || closed) return null;
 
     return (
-        <div className="relative z-[60] w-full bg-blue-600 border-b-2 border-white/20 text-white font-mono overflow-hidden animate-in slide-in-from-top duration-500">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIG9wYWNpdHk9IjAuMSI+PHBhdGggZD0iTTAgMjBMMjAgME0tMTAgMjBMMjAgLTEwIi8+PC9nPjwvc3ZnPg==')] opacity-20 pointer-events-none" />
-            
-            <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1">
-                    <div className="shrink-0 w-10 h-10 bg-white/10 border border-white/20 flex items-center justify-center animate-pulse">
-                        <Megaphone size={18} />
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 overflow-hidden">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-white text-blue-600 px-2 py-0.5 shrink-0">NEW_ANNOUNCEMENT</span>
-                        <p className="text-sm font-black uppercase tracking-tight truncate">
-                            {announcement.content}
-                        </p>
-                    </div>
+        <div className="relative z-40 border-b border-line bg-ink-900">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-2.5">
+                <div className="flex min-w-0 items-center gap-3">
+                    <Megaphone size={14} className="hidden shrink-0 text-signal sm:block" />
+                    <span className="shrink-0 border border-signal/30 bg-signal/10 px-2 py-0.5 font-data text-[9px] uppercase tracking-[0.16em] text-signal">
+                        Update
+                    </span>
+                    <p className="truncate font-data text-xs text-white/90">
+                        {announcement.content}
+                    </p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex shrink-0 items-center gap-1">
                     {announcement.link && (
-                        <a 
-                            href={announcement.link} 
+                        <a
+                            href={announcement.link}
                             target="_blank"
-                            className="shrink-0 flex items-center gap-2 bg-black/20 hover:bg-black/40 border border-white/30 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all group"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-1 font-data text-[10px] uppercase tracking-[0.14em] text-dim transition-colors hover:text-white"
                         >
-                            LEARN_MORE <ExternalLink size={12} className="group-hover:translate-x-1 transition-transform" />
+                            Read more
+                            <ArrowUpRight size={12} />
                         </a>
                     )}
-                    <button 
+                    <button
+                        type="button"
                         onClick={() => setClosed(true)}
-                        className="p-2 hover:bg-white/10 transition-colors"
+                        className="grid h-7 w-7 place-items-center text-dim transition-colors hover:text-white"
+                        aria-label="Dismiss announcement"
                     >
-                        <X size={18} />
+                        <X size={15} />
                     </button>
                 </div>
             </div>

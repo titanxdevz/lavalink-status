@@ -1,83 +1,113 @@
-"use client";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
-import { ClipboardList, ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import { ClipboardList } from "lucide-react";
+import { LegalPage } from "@/components/site/LegalPage";
+import { SITE } from "@/lib/site";
+import { breadcrumbJsonLd, webPageJsonLd } from "@/lib/seo";
+
+const title = "Terms of service";
+const description =
+    "The rules for using the Lavalink Grid directory, submitting nodes, and relying on community-hosted Lavalink endpoints.";
+
+export const metadata = {
+    title,
+    description,
+    alternates: { canonical: "/terms" },
+    openGraph: { title, description, url: "/terms", type: "website" },
+    twitter: { card: "summary", title, description },
+};
+
+const sections = [
+    {
+        id: "acceptance",
+        number: "01",
+        title: "Acceptance",
+        content: [
+            "By accessing Lavalink Grid, you agree to these terms. If you do not agree, do not use the directory or submit a node.",
+        ],
+    },
+    {
+        id: "directory-role",
+        number: "02",
+        title: "What this service is",
+        content: [
+            "Lavalink Grid is a directory. The nodes listed here are hosted by independent volunteers and sponsors, not by the directory.",
+            "We verify that a node responded to a status probe at review time. We do not guarantee future uptime, performance, capacity, or security.",
+        ],
+    },
+    {
+        id: "acceptable-use",
+        number: "03",
+        title: "Acceptable use",
+        content: ["You agree not to:"],
+        list: [
+            "Flood, DDoS, or intentionally overload listed nodes.",
+            "Use nodes for illegal streaming or copyright infringement.",
+            "Repackage node credentials behind a paywall.",
+            "Scrape the directory in a way that degrades service for others.",
+            "Submit nodes you do not own or have permission to share.",
+        ],
+    },
+    {
+        id: "submissions",
+        number: "04",
+        title: "Node submissions",
+        content: [
+            "By submitting a node, you confirm that you are the operator or have explicit permission to publish its credentials.",
+            "You are responsible for keeping the submitted auth key accurate. We may remove any node at our discretion, including for abuse, downtime, or security concerns.",
+        ],
+    },
+    {
+        id: "availability",
+        number: "05",
+        title: "Availability and warranty",
+        content: [
+            'The directory and the JSON API are provided "as is" without warranties of any kind, express or implied.',
+            "We may change, suspend, or discontinue any part of the service without notice.",
+        ],
+    },
+    {
+        id: "liability",
+        number: "06",
+        title: "Limitation of liability",
+        content: [
+            "To the maximum extent permitted by law, Lavalink Grid, its maintainers, and contributors are not liable for damages arising from the use of, or inability to use, listed nodes or the directory itself.",
+        ],
+    },
+    {
+        id: "changes",
+        number: "07",
+        title: "Changes",
+        content: [
+            "These terms may be updated as the directory evolves. The updated date on this page reflects the latest revision.",
+        ],
+    },
+    {
+        id: "contact",
+        number: "08",
+        title: "Contact",
+        content: [
+            "Questions about these terms can be raised in the community Discord.",
+            `Community: ${SITE.discord}`,
+        ],
+    },
+];
 
 export default function TermsPage() {
     return (
-        <div className="min-h-screen bg-[#050505] text-white selection:bg-primary/30 font-sans">
-            <Navbar activeTab="terms" />
-            
-            <main className="max-w-4xl mx-auto px-6 py-24">
-                <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors mb-12 text-sm font-medium">
-                    <ChevronLeft size={16} /> Back to Directory
-                </Link>
-
-                <div className="space-y-12">
-                    <header>
-                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-6 text-blue-400">
-                            <ClipboardList size={24} />
-                        </div>
-                        <h1 className="text-5xl font-black tracking-tighter mb-4">Terms of Service</h1>
-                        <p className="text-white/40 text-lg">Last updated: March 22, 2026</p>
-                    </header>
-
-                    <div className="prose prose-invert prose-blue max-w-none space-y-8 text-white/60 leading-relaxed">
-                        <section className="space-y-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Introduction</h2>
-                            <p>
-                                Welcome to Lavalink List. By accessing our website, you agree to these terms of service. 
-                                Please read them carefully before using our directory.
-                            </p>
-                        </section>
-
-                        <section className="space-y-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Acceptable Use</h2>
-                            <p>
-                                You agree to use the nodes provided in our directory responsibly. You must not:
-                            </p>
-                            <ul className="list-disc pl-6 space-y-2">
-                                <li>Attempt to DDoS or overload the listed nodes.</li>
-                                <li>Use the nodes for illegal streaming or copyright infringement.</li>
-                                <li>Redistribute node credentials behind a paywall.</li>
-                                <li>Automate queries to our directory without proper API headers.</li>
-                            </ul>
-                        </section>
-
-                        <section className="space-y-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Disclaimer</h2>
-                            <p>
-                                Lavalink List is a directory of third-party community-hosted nodes. 
-                                We are not responsible for the performance, offline status, or content 
-                                played through these nodes. Use them at your own risk.
-                            </p>
-                            <p className="font-bold text-white/80">
-                                This service is provided "as is" without any warranty.
-                            </p>
-                        </section>
-
-                        <section className="space-y-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Node Submissions</h2>
-                            <p>
-                                By submitting a node, you confirm that you are the provider or have explicit 
-                                permission to share the node credentials publicly. 
-                                We reserve the right to remove any node for any reason at our discretion.
-                            </p>
-                        </section>
-
-                        <section className="space-y-4">
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Liability</h2>
-                            <p>
-                                Lavalink List, its creators, and administrators shall not be held liable 
-                                for any damages resulting from the use or inability to use the listed nodes.
-                            </p>
-                        </section>
-                    </div>
-                </div>
-            </main>
-
-            <Footer />
-        </div>
+        <LegalPage
+            eyebrow="Legal"
+            title={title}
+            description="The rules for using the directory, submitting nodes, and relying on community-hosted endpoints."
+            updated="November 2026"
+            icon={ClipboardList}
+            intro="These terms cover the website, the submission flow, and the public JSON API. Individual nodes may have their own operator policies."
+            sections={sections}
+            jsonLd={[
+                webPageJsonLd({ title, description, path: "/terms" }),
+                breadcrumbJsonLd([
+                    { label: "Home", href: "/" },
+                    { label: "Terms of service", href: "/terms" },
+                ]),
+            ]}
+        />
     );
 }

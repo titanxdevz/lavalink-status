@@ -1,41 +1,148 @@
-import { Github, Twitter, MessageSquare, Zap, Globe, Heart } from "lucide-react";
 import Link from "next/link";
+import { ArrowUpRight, MessageSquare } from "lucide-react";
+
+const DIRECTORY_LINKS = [
+    { href: "/", label: "Node directory" },
+    { href: "/ssl", label: "SSL nodes" },
+    { href: "/non-ssl", label: "Non-SSL nodes" },
+    { href: "/leaderboard", label: "Leaderboard" },
+];
+
+const COMMUNITY_LINKS = [
+    { href: "/submit", label: "Add a node" },
+    { href: "https://discord.vexanode.cloud", label: "Discord", external: true },
+];
+
+const DATA_LINKS = [
+    { href: "/api/nodes", label: "JSON API" },
+    { href: "/sitemap.xml", label: "Sitemap" },
+    { href: "/llms.txt", label: "llms.txt" },
+    { href: "/robots.txt", label: "Robots" },
+];
+
+const LEGAL_LINKS = [
+    { href: "/privacy", label: "Privacy" },
+    { href: "/terms", label: "Terms" },
+];
 
 export function Footer() {
     return (
-        <footer className="mt-20 border-t border-white/5 bg-[#050505] text-white/40 pb-20 pt-16">
-            <div className="container mx-auto px-6 max-w-6xl">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                    <div className="col-span-1 md:col-span-2">
-                         <Link href="/" className="flex items-center gap-3 mb-6">
-                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-black font-black italic">LL</div>
-                            <span className="font-bold text-xl tracking-tight text-white">Lavalink List</span>
+        <footer className="border-t border-line bg-ink-950">
+            <div className="mx-auto max-w-7xl px-6 py-14">
+                <div className="grid gap-10 md:grid-cols-12">
+                    <div className="md:col-span-4">
+                        <Link href="/" className="flex items-center gap-3">
+                            <span className="grid h-9 w-9 place-items-center border border-signal/40 bg-signal/10 font-data text-xs font-semibold tracking-[0.08em] text-signal">
+                                LL
+                            </span>
+                            <span className="font-display text-base font-semibold tracking-tight text-white">
+                                Lavalink <span className="text-dim">Grid</span>
+                            </span>
                         </Link>
-                        <p className="max-w-xs text-sm leading-relaxed mb-8">
-                            Empowering Discord bot developers with free, high-performance Lavalink nodes. 
-                            Community verified and always open.
+                        <p className="mt-4 max-w-xs text-sm leading-relaxed text-dim">
+                            A community-run directory of public Lavalink nodes for Discord
+                            music bots. Live health, copyable endpoints, no account required
+                            to connect.
                         </p>
+                        <div className="mt-5 inline-flex items-center gap-2 font-data text-[10px] uppercase tracking-[0.14em] text-dim">
+                            <span className="h-1.5 w-1.5 bg-ok motion-safe:animate-pulse-soft" />
+                            Grid operational
+                        </div>
                     </div>
 
-                    <div>
-                        <h4 className="text-white font-bold text-sm uppercase tracking-widest mb-6">Platform</h4>
-                        <ul className="space-y-4 text-sm">
-                            <li><Link href="/" className="hover:text-white transition-colors">Home Page</Link></li>
-                            <li><Link href="/ssl" className="hover:text-white transition-colors">SSL Nodes</Link></li>
-                            <li><Link href="/non-ssl" className="hover:text-white transition-colors">Non-SSL Nodes</Link></li>
-                            <li><Link href="/submit" className="hover:text-white transition-colors font-semibold text-blue-400">Add Your Node</Link></li>
+                    <div className="md:col-span-2">
+                        <h3 className="font-data text-[10px] uppercase tracking-[0.18em] text-dim">
+                            Directory
+                        </h3>
+                        <ul className="mt-4 space-y-2.5">
+                            {DIRECTORY_LINKS.map((link) => (
+                                <li key={link.href}>
+                                    <Link
+                                        href={link.href}
+                                        className="text-sm text-white/80 transition-colors hover:text-signal"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <h3 className="font-data text-[10px] uppercase tracking-[0.18em] text-dim">
+                            Community
+                        </h3>
+                        <ul className="mt-4 space-y-2.5">
+                            {COMMUNITY_LINKS.map((link) => (
+                                <li key={link.href}>
+                                    {link.external ? (
+                                        <a
+                                            href={link.href}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 text-sm text-white/80 transition-colors hover:text-signal"
+                                        >
+                                            <MessageSquare size={13} />
+                                            {link.label}
+                                            <ArrowUpRight size={11} />
+                                        </a>
+                                    ) : (
+                                        <Link
+                                            href={link.href}
+                                            className="text-sm text-white/80 transition-colors hover:text-signal"
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <h3 className="font-data text-[10px] uppercase tracking-[0.18em] text-dim">
+                            Data
+                        </h3>
+                        <ul className="mt-4 space-y-2.5">
+                            {DATA_LINKS.map((link) => (
+                                <li key={link.href}>
+                                    <Link
+                                        href={link.href}
+                                        className="text-sm text-white/80 transition-colors hover:text-signal"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <h3 className="font-data text-[10px] uppercase tracking-[0.18em] text-dim">
+                            Legal
+                        </h3>
+                        <ul className="mt-4 space-y-2.5">
+                            {LEGAL_LINKS.map((link) => (
+                                <li key={link.href}>
+                                    <Link
+                                        href={link.href}
+                                        className="text-sm text-white/80 transition-colors hover:text-signal"
+                                    >
+                                        {link.label}
+                                    </Link>
+                                </li>
+                            ))}
                         </ul>
                     </div>
                 </div>
 
-                <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <p className="text-xs">
-                        &copy; {new Date().getFullYear()} Lavalink List.
+                <div className="mt-12 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="font-data text-[10px] uppercase tracking-[0.14em] text-dim">
+                        © {new Date().getFullYear()} Lavalink Grid. Community operated.
                     </p>
-                    <div className="flex items-center gap-6 text-xs uppercase font-bold tracking-widest">
-                        <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-                        <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-                    </div>
+                    <p className="font-data text-[10px] uppercase tracking-[0.14em] text-dim">
+                        Built for Discord music bots.
+                    </p>
                 </div>
             </div>
         </footer>

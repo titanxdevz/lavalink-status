@@ -6,8 +6,59 @@ import { notifyNodeSubmission, notifyNodeStatusChange, notifyNodeDeletion } from
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 
+// Raw TCP probes and the DNS override below require the Node.js runtime.
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Force prioritize IPv4 over IPv6 to fix connectivity issues on localhost
 dns.setDefaultResultOrder('ipv4first');
+
+// The landing page can mount several times in one session and the client already
+// refreshes every two minutes. A short-lived cache absorbs bursts of traffic
+// without serving stale health data for long.
+const CACHE_TTL_MS = 15 * 1000;
+const responseCache = new Map();
+const inFlightProbes = new Map();
+
+function readCache(key) {
+    const entry = responseCache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt <= Date.now()) {
+        responseCache.delete(key);
+        return null;
+    }
+    return entry.data;
+}
+
+function writeCache(key, data) {
+    responseCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+function invalidateCache() {
+    responseCache.clear();
+    inFlightProbes.clear();
+}
+
+// Fields a regular owner (or an admin) is allowed to edit. Everything else
+// (ownerId, status, createdAt, ...) must go through its dedicated path.
+const EDITABLE_FIELDS = [
+    'identifier',
+    'host',
+    'port',
+    'password',
+    'secure',
+    'restVersion',
+    'website',
+    'discord',
+    'authorId',
+];
+
+const VALID_STATUSES = new Set(['pending', 'approved', 'rejected']);
+
+function parsePort(value) {
+    const port = Number.parseInt(value, 10);
+    return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
+}
 
 async function getNodesCollection() {
     const client = await clientPromise;
@@ -59,78 +110,102 @@ async function fetchWithRetry(url, options, maxRetries = 1) {
     throw lastError;
 }
 
+async function probeNode(node) {
+    const protocol = node.secure ? "https" : "http";
+    const baseUrl = `${protocol}://${node.host}:${node.port}`;
+    const version = node.restVersion || 'v4';
+    const statsUrl = `${baseUrl}/${version}/stats`;
+    const infoUrl = `${baseUrl}/${version}/info`;
+    const startedAt = Date.now();
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+        const fetchOptions = {
+            headers: { Authorization: node.password },
+            signal: controller.signal,
+            cache: 'no-store',
+        };
+
+        const [statsRes, infoRes] = await Promise.all([
+            fetchWithRetry(statsUrl, fetchOptions),
+            fetchWithRetry(infoUrl, fetchOptions)
+        ]).finally(() => clearTimeout(timeoutId));
+
+        if (!statsRes.ok) throw new Error(`Stats failed: ${statsRes.status}`);
+
+        const stats = await statsRes.json();
+        const info = infoRes.ok ? await infoRes.json() : null;
+
+        const systemLoad = (stats.cpu?.systemLoad * 100 || 0).toFixed(2);
+
+        return {
+            ...node,
+            _id: node._id.toString(), // Convert ObjectId to string for front-end
+            isConnected: true,
+            memory: formatBytes(stats.memory?.used || 0),
+            cpu: `${systemLoad}%`,
+            connections: `${stats.playingPlayers || 0}/${stats.players || 0}`,
+            systemLoad: `${systemLoad}%`,
+            cpuCores: stats.cpu?.cores || 0,
+            uptime: formatDuration(stats.uptime || 0),
+            uptimeMillis: stats.uptime || 0,
+            latencyMs: Date.now() - startedAt,
+            info: info || {},
+        };
+    } catch {
+        clearTimeout(timeoutId);
+        return {
+            ...node,
+            _id: node._id.toString(), // Convert ObjectId to string for front-end
+            isConnected: false,
+            memory: "0 B",
+            cpu: "0%",
+            connections: "0/0",
+            systemLoad: "0%",
+            cpuCores: 0,
+            uptime: "0s",
+            uptimeMillis: 0,
+            latencyMs: null,
+            info: null,
+        };
+    }
+}
+
+async function loadNodes(showAll) {
+    const collection = await getNodesCollection();
+    const query = showAll ? {} : { status: 'approved' };
+    const localNodes = await collection.find(query).toArray();
+    return Promise.all(localNodes.map(probeNode));
+}
+
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const showAll = searchParams.get('all') === 'true';
+    const cacheKey = showAll ? 'all' : 'approved';
+
+    const cached = readCache(cacheKey);
+    if (cached) {
+        return NextResponse.json(cached, {
+            headers: { 'Cache-Control': 'no-store' },
+        });
+    }
 
     try {
-        const collection = await getNodesCollection();
-        const query = showAll ? {} : { status: 'approved' };
-        const localNodes = await collection.find(query).toArray();
+        // Collapse concurrent misses into a single probe pass.
+        let pending = inFlightProbes.get(cacheKey);
+        if (!pending) {
+            pending = loadNodes(showAll).finally(() => inFlightProbes.delete(cacheKey));
+            inFlightProbes.set(cacheKey, pending);
+        }
 
-        const nodePromises = localNodes.map(async (node) => {
-            const protocol = node.secure ? "https" : "http";
-            const baseUrl = `${protocol}://${node.host}:${node.port}`;
-            const version = node.restVersion || 'v4';
-            const statsUrl = `${baseUrl}/${version}/stats`;
-            const infoUrl = `${baseUrl}/${version}/info`;
+        const results = await pending;
+        writeCache(cacheKey, results);
 
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // reduced timeout to 8s
-
-            try {
-                const fetchOptions = {
-                    headers: { Authorization: node.password },
-                    signal: controller.signal
-                };
-
-                const [statsRes, infoRes] = await Promise.all([
-                    fetchWithRetry(statsUrl, fetchOptions),
-                    fetchWithRetry(infoUrl, fetchOptions)
-                ]).finally(() => clearTimeout(timeoutId));
-
-                if (!statsRes.ok) throw new Error(`Stats failed: ${statsRes.status}`);
-
-                const stats = await statsRes.json();
-                const info = infoRes.ok ? await infoRes.json() : null;
-
-                const systemLoad = (stats.cpu?.systemLoad * 100 || 0).toFixed(2);
-
-                return {
-                    ...node,
-                    _id: node._id.toString(), // Convert ObjectId to string for front-end
-                    isConnected: true,
-                    memory: formatBytes(stats.memory?.used || 0),
-                    cpu: `${systemLoad}%`,
-                    connections: `${stats.playingPlayers || 0}/${stats.players || 0}`,
-                    systemLoad: `${systemLoad}%`,
-                    cpuCores: stats.cpu?.cores || 0,
-                    uptime: formatDuration(stats.uptime || 0),
-                    uptimeMillis: stats.uptime || 0,
-                    info: info || {},
-                };
-
-            } catch (error) {
-                clearTimeout(timeoutId);
-                return {
-                    ...node,
-                    _id: node._id.toString(), // Convert ObjectId to string for front-end
-                    isConnected: false,
-                    memory: "0 B",
-                    cpu: "0%",
-                    connections: "0/0",
-                    systemLoad: "0%",
-                    cpuCores: 0,
-                    uptime: "0s",
-                    uptimeMillis: 0,
-                    info: null,
-                };
-            }
+        return NextResponse.json(results, {
+            headers: { 'Cache-Control': 'no-store' },
         });
-
-        const results = await Promise.all(nodePromises);
-        return NextResponse.json(results);
-
     } catch (error) {
         console.error("Error processing nodes:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -147,7 +222,7 @@ export async function POST(request) {
         const client = await clientPromise;
         const db = client.db();
         const user = await db.collection("users").findOne({ _id: new ObjectId(session.user.id) });
-        
+
         if (user?.isBanned) {
             return NextResponse.json({ error: "Access denied. Your account is currently suspended from infrastructure deployment." }, { status: 403 });
         }
@@ -155,15 +230,16 @@ export async function POST(request) {
         const body = await request.json();
         const { identifier, host, port, password, secure, restVersion, authorId, website, discord } = body;
 
-        if (!identifier || !host || !port || !password) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        const parsedPort = parsePort(port);
+        if (!identifier || !host || !parsedPort || !password) {
+            return NextResponse.json({ error: "Missing or invalid required fields" }, { status: 400 });
         }
 
         const collection = await getNodesCollection();
         const newNode = {
             identifier,
             host,
-            port: parseInt(port),
+            port: parsedPort,
             password,
             secure: !!secure,
             restVersion: restVersion || "v4",
@@ -176,13 +252,14 @@ export async function POST(request) {
         };
 
         const result = await collection.insertOne(newNode);
-        
+        invalidateCache();
+
         // Send Discord notification for new submission
         const nodeWithId = { ...newNode, _id: result.insertedId.toString() };
         await notifyNodeSubmission(nodeWithId);
-        
-        return NextResponse.json({ 
-            message: "Node submitted for approval", 
+
+        return NextResponse.json({
+            message: "Node submitted for approval",
             node: nodeWithId
         });
     } catch (error) {
@@ -194,40 +271,81 @@ export async function PATCH(request) {
     try {
         const session = await getServerSession(authOptions);
         const body = await request.json();
-        const { _id, host, port, ...updates } = body;
+        const { _id, reason, ...payload } = body;
 
-        if (!_id && (!host || !port)) {
+        let query;
+        if (_id) {
+            if (!ObjectId.isValid(_id)) {
+                return NextResponse.json({ error: "Invalid node id" }, { status: 400 });
+            }
+            query = { _id: new ObjectId(_id) };
+        } else if (payload.host && payload.port !== undefined) {
+            const lookupPort = parsePort(payload.port);
+            if (!lookupPort) {
+                return NextResponse.json({ error: "Invalid port" }, { status: 400 });
+            }
+            query = { host: payload.host, port: lookupPort };
+        } else {
             return NextResponse.json({ error: "Missing required identifier" }, { status: 400 });
         }
 
         const collection = await getNodesCollection();
-        let query = {};
-        if (_id) {
-            query = { _id: new ObjectId(_id) };
-        } else {
-            query = { host: host, port: parseInt(port) };
-        }
-
         const currentNode = await collection.findOne(query);
         if (!currentNode) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
         const adminPass = request.headers.get("X-Admin-Password");
-        const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
-        const isOwner = session && session.user.id === currentNode.ownerId;
-        
-        if (!isAdmin && !isOwner && updates.status === undefined) {
-             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        const isAdmin = Boolean(adminPass && process.env.ADMIN_PASSWORD && adminPass === process.env.ADMIN_PASSWORD);
+        const isOwner = Boolean(session && session.user.id === currentNode.ownerId);
+        const wantsStatusChange = payload.status !== undefined;
+
+        // Preserve existing behaviour: a request that only changes status is
+        // accepted for the admin flow, while other edits need ownership.
+        if (!isAdmin && !isOwner && !wantsStatusChange) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        }
+
+        if (wantsStatusChange && !VALID_STATUSES.has(payload.status)) {
+            return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+        }
+
+        const updates = {};
+        for (const field of EDITABLE_FIELDS) {
+            if (payload[field] !== undefined) {
+                updates[field] = payload[field];
+            }
+        }
+
+        // When the node is addressed by host/port, those fields identify the
+        // record rather than describing a change.
+        if (!_id) {
+            delete updates.host;
+            delete updates.port;
         }
 
         if (updates.port !== undefined) {
-             updates.port = parseInt(updates.port);
+            const nextPort = parsePort(updates.port);
+            if (!nextPort) {
+                return NextResponse.json({ error: "Invalid port" }, { status: 400 });
+            }
+            updates.port = nextPort;
+        }
+
+        if (updates.secure !== undefined) {
+            updates.secure = !!updates.secure;
+        }
+
+        if (wantsStatusChange) {
+            updates.status = payload.status;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return NextResponse.json({ error: "No changes provided" }, { status: 400 });
         }
 
         const oldStatus = currentNode.status;
         const newStatus = updates.status;
-        const reason = body.reason || null;
 
         const result = await collection.updateOne(query, { $set: updates });
 
@@ -235,9 +353,11 @@ export async function PATCH(request) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
+        invalidateCache();
+
         if (oldStatus !== newStatus && (newStatus === 'approved' || newStatus === 'rejected')) {
             const updatedNode = { ...currentNode, ...updates, _id: currentNode._id.toString() };
-            await notifyNodeStatusChange(updatedNode, oldStatus, newStatus, reason);
+            await notifyNodeStatusChange(updatedNode, oldStatus, newStatus, reason || null);
         }
 
         return NextResponse.json({ message: `Node updated successfully` });
@@ -254,22 +374,32 @@ export async function DELETE(request) {
         const port = searchParams.get('port');
         const id = searchParams.get('id');
 
-        if (!id && (!host || !port)) {
+        let query;
+        if (id) {
+            if (!ObjectId.isValid(id)) {
+                return NextResponse.json({ error: "Invalid node id" }, { status: 400 });
+            }
+            query = { _id: new ObjectId(id) };
+        } else if (host && port) {
+            const parsedPort = parsePort(port);
+            if (!parsedPort) {
+                return NextResponse.json({ error: "Invalid port" }, { status: 400 });
+            }
+            query = { host: host, port: parsedPort };
+        } else {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
         const collection = await getNodesCollection();
-        const query = id ? { _id: new ObjectId(id) } : { host: host, port: parseInt(port) };
-        
         const nodeToDelete = await collection.findOne(query);
         if (!nodeToDelete) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
         const adminPass = request.headers.get("X-Admin-Password");
-        const isAdmin = adminPass && adminPass === process.env.ADMIN_PASSWORD;
-        const isOwner = session && session.user.id === nodeToDelete.ownerId;
-        
+        const isAdmin = Boolean(adminPass && process.env.ADMIN_PASSWORD && adminPass === process.env.ADMIN_PASSWORD);
+        const isOwner = Boolean(session && session.user.id === nodeToDelete.ownerId);
+
         if (!isAdmin && !isOwner) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
@@ -280,14 +410,13 @@ export async function DELETE(request) {
             return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
-        if (nodeToDelete) {
-            const nodeForNotification = { ...nodeToDelete, _id: nodeToDelete._id.toString() };
-            await notifyNodeDeletion(nodeForNotification);
-        }
+        invalidateCache();
+
+        const nodeForNotification = { ...nodeToDelete, _id: nodeToDelete._id.toString() };
+        await notifyNodeDeletion(nodeForNotification);
 
         return NextResponse.json({ message: "Node deleted successfully" });
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
-

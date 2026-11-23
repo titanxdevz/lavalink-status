@@ -1,296 +1,227 @@
-"use client";
-import { useState } from "react";
-import {
-    Server, Shield, Globe, MessageSquare,
-    Lock, Hash, User, ArrowRight, Loader2, Tag, ChevronLeft, Check, Terminal, Cpu, LogIn
-} from "lucide-react";
-import { useNodes } from "@/contexts/NodesContext";
+import { ClipboardCheck, Radio, Server, ShieldCheck, Terminal } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import Link from "next/link";
-import { useSession, signIn } from "next-auth/react";
+import { SubmitNodeForm } from "@/components/forms/SubmitNodeForm";
+import { JsonLd } from "@/components/site/JsonLd";
+import {
+    Breadcrumbs,
+    PageHeader,
+    Section,
+    SectionHeader,
+} from "@/components/site/ui";
+import { SITE } from "@/lib/site";
+import {
+    breadcrumbJsonLd,
+    faqJsonLd,
+    howToJsonLd,
+    webPageJsonLd,
+} from "@/lib/seo";
+
+const title = "Submit a Lavalink node";
+const description =
+    "Add a free public Lavalink node to the directory. Sign in with Discord, provide the endpoint and auth key, and an administrator will review the node before it goes live.";
+
+const STEPS = [
+    {
+        icon: Server,
+        name: "Provide the endpoint",
+        text: "Enter the public host, port, auth key, and REST version of your Lavalink node.",
+    },
+    {
+        icon: ShieldCheck,
+        name: "Pick the transport",
+        text: "Mark the node as TLS if it serves HTTPS/WSS with a valid certificate.",
+    },
+    {
+        icon: Radio,
+        name: "Automatic probe",
+        text: "The directory calls the node's stats endpoint and reads players, memory, load, and uptime.",
+    },
+    {
+        icon: ClipboardCheck,
+        name: "Manual review",
+        text: "An administrator reviews the submission and approves or rejects it before it appears publicly.",
+    },
+];
+
+const FAQS = [
+    {
+        question: "Who can submit a Lavalink node?",
+        answer:
+            "Anyone signed in with Discord who owns the node or has explicit permission from its operator. Submissions are tied to the signed-in account.",
+    },
+    {
+        question: "Is the auth key published?",
+        answer:
+            "Yes. Public nodes in this directory expose their connection details, including the auth key, so bots can connect. Never submit a private or production-only key.",
+    },
+    {
+        question: "How long does review take?",
+        answer:
+            "Review is manual. Most submissions are checked when an administrator is available; joining the community Discord is the fastest way to follow up.",
+    },
+    {
+        question: "What if my node is rejected?",
+        answer:
+            "You will receive a reason when a rejection notification is sent. Fix the endpoint or credentials and submit again, or ask in Discord.",
+    },
+];
+
+export const metadata = {
+    title,
+    description,
+    alternates: { canonical: "/submit" },
+    openGraph: { title, description, url: "/submit", type: "website" },
+    twitter: { card: "summary_large_image", title, description },
+};
 
 export default function SubmitPage() {
-    const { data: session, status } = useSession();
-    const { submitNode } = useNodes();
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
-    const [error, setError] = useState("");
-
-    const [formData, setFormData] = useState({
-        identifier: "",
-        host: "",
-        port: "2333",
-        password: "youshallnotpass",
-        secure: false,
-        restVersion: "v4",
-        authorId: "",
-        website: "",
-        discord: ""
-    });
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError("");
-        try {
-            await submitNode(formData);
-            setSuccess(true);
-            setTimeout(() => {
-                window.location.href = "/";
-            }, 3000);
-        } catch (err) {
-            setError(err.message || "Failed to submit node");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value
-        }));
-    };
-
     return (
-        <div className="min-h-screen bg-[#000000] text-[#f4f4f5] font-mono selection:bg-blue-500 selection:text-white relative overflow-x-hidden">
-            <div className="fixed inset-0 pointer-events-none z-0 flex flex-wrap opacity-10">
-                {[...Array(200)].map((_, i) => (
-                    <div key={i} className="w-8 h-8 border-[0.5px] border-[#333333]"></div>
-                ))}
-            </div>
-
-            <style>{`
-                @keyframes revealUp {
-                    from { opacity: 0; transform: translateY(40px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes slideRight {
-                    from { opacity: 0; transform: translateX(-40px); }
-                    to { opacity: 1; transform: translateX(0); }
-                }
-                .animate-reveal { animation: revealUp 0.6s cubic-bezier(0, 0, 0.2, 1) forwards; opacity: 0; }
-                .animate-slide { animation: slideRight 0.6s cubic-bezier(0, 0, 0.2, 1) forwards; opacity: 0; }
-            `}</style>
-
+        <div className="min-h-screen bg-ink-950 font-display text-white selection:bg-signal selection:text-ink-950">
             <Navbar />
 
-            <main className="relative z-10 max-w-4xl mx-auto px-6 pt-24 pb-40">
-                <Link
-                    href="/"
-                    className="animate-slide inline-flex items-center gap-3 text-[#a1a1aa] font-black uppercase tracking-widest hover:text-white transition-colors mb-12 group bg-[#09090b] border-2 border-[#27272a] hover:border-white px-4 py-2"
-                >
-                    <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                    ABORT / RETURN
-                </Link>
+            <main>
+                <PageHeader
+                    breadcrumbs={
+                        <Breadcrumbs
+                            items={[{ label: "Home", href: "/" }, { label: "Submit a node" }]}
+                        />
+                    }
+                    eyebrow="Node submission"
+                    title="Add your node to the grid."
+                    description="Share a public Lavalink node with the community. Submissions are probed and reviewed before they appear in the directory."
+                    icon={Terminal}
+                    meta={[
+                        { label: "Auth", value: "Discord" },
+                        { label: "Review", value: "Manual" },
+                        { label: "Cost", value: "Free" },
+                        { label: "Indexed", value: "Live" },
+                    ]}
+                />
 
-                <div className="animate-reveal mb-16 border-b-2 border-[#27272a] pb-12">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="w-16 h-16 bg-blue-500 text-black flex items-center justify-center border-2 border-transparent shadow-[4px_4px_0px_0px_#f4f4f5]">
-                            <Terminal size={32} />
-                        </div>
-                        <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none text-white">
-                            INIT_NODE
-                        </h1>
+                <Section>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        {STEPS.map((step, index) => (
+                            <div key={step.name} className="border border-line bg-ink-900 p-5">
+                                <div className="flex items-center justify-between">
+                                    <span className="grid h-9 w-9 place-items-center border border-signal/30 bg-signal/10 text-signal">
+                                        <step.icon size={16} />
+                                    </span>
+                                    <span className="font-data text-[10px] tracking-[0.14em] text-dim">
+                                        {String(index + 1).padStart(2, "0")}
+                                    </span>
+                                </div>
+                                <h2 className="mt-4 font-display text-base font-semibold text-white">
+                                    {step.name}
+                                </h2>
+                                <p className="mt-2 text-sm leading-relaxed text-dim">{step.text}</p>
+                            </div>
+                        ))}
                     </div>
-                    <p className="text-[#a1a1aa] text-xl font-medium leading-relaxed uppercase tracking-wide max-w-2xl">
-                        Submit your public Lavalink node to the grid.
-                        Awaiting manual verification protocol.
-                    </p>
-                </div>
+                </Section>
 
-                {!session ? (
-                    <div className="animate-reveal bg-[#09090b] border-4 border-[#27272a] p-12 text-center shadow-[16px_16px_0px_0px_#3b82f6]">
-                        <div className="w-20 h-20 bg-blue-500 text-black flex items-center justify-center mx-auto mb-8 border-2 border-transparent shadow-[6px_6px_0px_0px_#f4f4f5]">
-                            <Lock size={32} />
-                        </div>
-                        <h2 className="text-4xl font-black uppercase tracking-tighter text-white mb-6">Authentication Required</h2>
-                        <p className="text-[#a1a1aa] text-lg font-black uppercase tracking-widest mb-10 max-w-lg mx-auto">
-                            To prevent spam and ensure node accountability, you must authenticate with your Discord account before submitting a node.
-                        </p>
-                        <button
-                            onClick={() => signIn('discord')}
-                            className="inline-flex items-center gap-4 bg-blue-500 border-2 border-blue-500 text-black font-black text-xl tracking-widest uppercase px-10 py-5 transition-all shadow-[8px_8px_0px_0px_#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[16px_16px_0px_0px_#f4f4f5]"
-                        >
-                            <LogIn size={24} /> INITIALIZE DISCORD AUTH
-                        </button>
+                <Section tone="raised">
+                    <SectionHeader
+                        eyebrow="Submission form"
+                        title="Node details."
+                        description="Everything except the optional links is required. The connection preview updates as you type."
+                    />
+                    <div className="mt-8">
+                        <SubmitNodeForm />
                     </div>
-                ) : success ? (
-                    <>
-                        <div className="animate-reveal bg-[#09090b] border-2 border-emerald-500 p-12 text-center shadow-[12px_12px_0px_0px_#10b981]">
-                            <div className="w-24 h-24 bg-emerald-500 text-black flex items-center justify-center mx-auto mb-8 border-4 border-[#000000] shadow-[8px_8px_0px_0px_#f4f4f5]">
-                                <Check size={48} />
-                            </div>
-                            <h2 className="text-4xl font-black uppercase tracking-tighter text-white mb-4">Transmission Successful</h2>
-                            <p className="text-[#a1a1aa] text-lg font-black uppercase tracking-widest mb-8">
-                                Node entered into review queue. Redirecting to main grid...
+                </Section>
+
+                <Section>
+                    <SectionHeader
+                        eyebrow="Review"
+                        title="What happens next."
+                        description="A short, predictable review process keeps the directory useful."
+                    />
+
+                    <div className="mt-8 grid gap-4 lg:grid-cols-12">
+                        <div className="border border-line bg-ink-900 p-6 lg:col-span-7">
+                            <ol className="space-y-5">
+                                {[
+                                    "Your node is stored with a pending status.",
+                                    "The directory probes the stats and info endpoints.",
+                                    "An administrator checks reachability, transport, and credentials.",
+                                    "Approved nodes appear in the live directory and the crawlable index.",
+                                ].map((item, index) => (
+                                    <li key={item} className="flex gap-4">
+                                        <span className="grid h-7 w-7 shrink-0 place-items-center border border-line bg-ink-950 font-data text-[10px] text-signal">
+                                            {index + 1}
+                                        </span>
+                                        <span className="text-sm leading-relaxed text-dim">
+                                            {item}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+
+                        <div className="border border-line bg-ink-900 p-6 lg:col-span-5">
+                            <p className="font-data text-[10px] uppercase tracking-[0.16em] text-dim">
+                                Requirements
                             </p>
+                            <ul className="mt-4 space-y-3">
+                                {[
+                                    "Publicly reachable hostname and port.",
+                                    "Lavalink v3 or v4 REST API enabled.",
+                                    "Auth key safe to publish.",
+                                    "Permission from the node owner.",
+                                    "Stable uptime if possible.",
+                                ].map((item) => (
+                                    <li
+                                        key={item}
+                                        className="border-b border-line/70 pb-3 text-sm leading-relaxed text-dim last:border-0 last:pb-0"
+                                    >
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
+                    </div>
+                </Section>
 
-                        <div className="animate-reveal bg-[#09090b] border-2 border-indigo-500 p-8 text-center shadow-[8px_8px_0px_0px_#6366f1]" style={{ animationDelay: '200ms' }}>
-                            <div className="flex items-center justify-center gap-4 mb-6">
-                                <div className="w-12 h-12 bg-indigo-500 text-black flex items-center justify-center border-2 border-transparent shadow-[4px_4px_0px_0px_#f4f4f5]">
-                                    <MessageSquare size={24} />
+                <Section tone="raised">
+                    <SectionHeader eyebrow="FAQ" title="Submission questions." />
+                    <div className="mt-8 grid gap-x-10 gap-y-8 md:grid-cols-2">
+                        {FAQS.map((faq, index) => (
+                            <div key={faq.question} className="border-t border-line pt-5">
+                                <div className="flex items-baseline gap-3">
+                                    <span className="font-data text-[10px] tracking-[0.14em] text-signal">
+                                        {String(index + 1).padStart(2, "0")}
+                                    </span>
+                                    <h3 className="font-display text-base font-medium text-white">
+                                        {faq.question}
+                                    </h3>
                                 </div>
-                                <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Join for Updates</h3>
+                                <p className="mt-3 max-w-prose pl-7 text-sm leading-relaxed text-dim">
+                                    {faq.answer}
+                                </p>
                             </div>
-                            <p className="text-[#a1a1aa] text-sm font-black uppercase tracking-widest mb-6">
-                                Get notified when your Lavalink node is accepted and receive updates
-                            </p>
-                            <a
-                                href="https://discord.vexanode.cloud"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-3 bg-indigo-500 border-2 border-indigo-500 text-black font-black text-lg tracking-widest uppercase px-8 py-4 transition-all shadow-[6px_6px_0px_0px_#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[10px_10px_0px_0px_#f4f4f5]"
-                            >
-                                <MessageSquare size={20} />
-                                JOIN DISCORD
-                            </a>
-                        </div>
-                    </>
-                ) : (
-                    <form onSubmit={handleSubmit} className="space-y-12">
-
-                        <div className="animate-reveal space-y-8 bg-[#09090b] border-2 border-[#27272a] p-8 md:p-10 shadow-[8px_8px_0px_0px_#27272a] hover:border-[#52525b] transition-colors" style={{ animationDelay: '100ms' }}>
-                            <div className="flex items-center gap-4 border-b-2 border-[#27272a] pb-6 mb-8">
-                                <Server className="text-blue-500" size={28} />
-                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white">Target Parameters</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Identifier</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <Hash size={20} className="text-[#52525b]" />
-                                        <input type="text" name="identifier" required placeholder="LAVALINK-EU-01" value={formData.identifier} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Host Address</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <Globe size={20} className="text-[#52525b]" />
-                                        <input type="text" name="host" required placeholder="NODE.EXAMPLE.COM" value={formData.host} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Port</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <Terminal size={20} className="text-[#52525b]" />
-                                        <input type="number" name="port" required placeholder="2333" value={formData.port} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Auth Key</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <Lock size={20} className="text-[#52525b]" />
-                                        <input type="text" name="password" required placeholder="YOUSHALLNOTPASS" value={formData.password} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="animate-reveal space-y-8 bg-[#09090b] border-2 border-[#27272a] p-8 md:p-10 shadow-[8px_8px_0px_0px_#27272a] hover:border-[#52525b] transition-colors" style={{ animationDelay: '200ms' }}>
-                            <div className="flex items-center gap-4 border-b-2 border-[#27272a] pb-6 mb-8">
-                                <Cpu className="text-blue-500" size={28} />
-                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white">System Flags</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div
-                                    className={`flex items-center gap-6 p-6 border-2 cursor-pointer transition-all ${formData.secure
-                                            ? 'bg-blue-500/10 border-blue-500 shadow-[6px_6px_0px_0px_#3b82f6]'
-                                            : 'bg-[#000000] border-[#27272a] hover:border-white'
-                                        }`}
-                                    onClick={() => setFormData(p => ({ ...p, secure: !p.secure }))}
-                                >
-                                    <Shield size={32} className={formData.secure ? "text-blue-500" : "text-[#52525b]"} />
-                                    <div className="flex-1">
-                                        <div className={`text-xl font-black tracking-tighter uppercase mb-1 ${formData.secure ? 'text-blue-500' : 'text-white'}`}>SECURE_SSL</div>
-                                        <div className="text-xs font-black text-[#a1a1aa] uppercase tracking-widest">HTTPS/WSS REQUIRED</div>
-                                    </div>
-                                    <div className={`w-6 h-6 border-2 flex items-center justify-center ${formData.secure ? 'border-blue-500 bg-blue-500' : 'border-[#52525b] bg-transparent'}`}>
-                                        {formData.secure && <Check size={16} className="text-black" />}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">API Version</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all h-[92px]">
-                                        <Tag size={20} className="text-[#52525b]" />
-                                        <select name="restVersion" value={formData.restVersion} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase appearance-none cursor-pointer">
-                                            <option value="v4">LAVALINK_V4</option>
-                                            <option value="v3">LAVALINK_V3</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="animate-reveal space-y-8 bg-[#09090b] border-2 border-[#27272a] p-8 md:p-10 shadow-[8px_8px_0px_0px_#27272a] hover:border-[#52525b] transition-colors" style={{ animationDelay: '300ms' }}>
-                            <div className="flex items-center gap-4 border-b-2 border-[#27272a] pb-6 mb-8">
-                                <User className="text-blue-500" size={28} />
-                                <h3 className="text-3xl font-black uppercase tracking-tighter text-white">Operator Registry</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Designation / Alias</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <User size={20} className="text-[#52525b]" />
-                                        <input type="text" name="authorId" required placeholder="SYS_ADMIN_01" value={formData.authorId} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Web Uplink (OPTIONAL)</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <Globe size={20} className="text-[#52525b]" />
-                                        <input type="url" name="website" placeholder="HTTPS://..." value={formData.website} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-[#a1a1aa] uppercase tracking-widest mb-3">Comms Link (OPTIONAL)</label>
-                                    <div className="flex items-center gap-4 bg-[#000000] border-2 border-[#27272a] px-4 py-4 focus-within:border-blue-500 focus-within:shadow-[6px_6px_0px_0px_#3b82f6] transition-all">
-                                        <MessageSquare size={20} className="text-[#52525b]" />
-                                        <input type="url" name="discord" placeholder="DISCORD.GG/..." value={formData.discord} onChange={handleChange} className="bg-transparent border-none outline-none text-white w-full font-black uppercase placeholder-[#52525b]" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <div className="animate-reveal bg-red-500/10 border-2 border-red-500 p-6 text-red-500 font-black uppercase tracking-widest text-sm flex items-center gap-4 shadow-[4px_4px_0px_0px_#ef4444]" style={{ animationDelay: '400ms' }}>
-                                <Terminal size={24} />
-                                ERR: {error}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`animate-reveal w-full py-8 border-2 font-black text-2xl tracking-widest uppercase flex items-center justify-center gap-6 transition-all shadow-[8px_8px_0px_0px] ${loading
-                                    ? 'bg-[#27272a] border-[#52525b] text-[#a1a1aa] shadow-[#52525b]'
-                                    : 'bg-blue-500 border-blue-500 text-black shadow-[#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-2 hover:-translate-x-2 hover:shadow-[16px_16px_0px_0px_#f4f4f5]'
-                                }`}
-                            style={{ animationDelay: '500ms' }}
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 size={32} className="animate-spin" />
-                                    PROCESSING...
-                                </>
-                            ) : (
-                                <>
-                                    EXECUTE_SUBMIT <ArrowRight size={32} />
-                                </>
-                            )}
-                        </button>
-                    </form>
-                )}
+                        ))}
+                    </div>
+                </Section>
             </main>
 
             <Footer />
+
+            <JsonLd
+                data={[
+                    webPageJsonLd({ title, description, path: "/submit" }),
+                    breadcrumbJsonLd([
+                        { label: "Home", href: "/" },
+                        { label: "Submit a node", href: "/submit" },
+                    ]),
+                    howToJsonLd({
+                        name: `Submit a public Lavalink node to ${SITE.name}`,
+                        description,
+                        steps: STEPS.map((step) => ({ name: step.name, text: step.text })),
+                    }),
+                    faqJsonLd(FAQS),
+                ]}
+            />
         </div>
     );
 }

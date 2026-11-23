@@ -1,152 +1,226 @@
 "use client";
+
 import Link from "next/link";
-import { Plus, Home, Shield, Server, Menu, X, Settings, LogIn, LogOut, User, Trophy } from "lucide-react";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { ChevronDown, LogIn, LogOut, Menu, Plus, User, X } from "lucide-react";
 
-export function Navbar({ activeTab }) {
+const NAV_ITEMS = [
+    { href: "/", label: "Nodes" },
+    { href: "/ssl", label: "SSL" },
+    { href: "/non-ssl", label: "Non-SSL" },
+    { href: "/leaderboard", label: "Leaderboard" },
+];
+
+function isActive(pathname, href) {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function Navbar() {
+    const pathname = usePathname();
     const { data: session } = useSession();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [userOpen, setUserOpen] = useState(false);
+    const userRef = useRef(null);
 
-    const navItems = [
-        { id: 'home', path: '/', label: 'Home', icon: Home },
-        { id: 'leaderboard', path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-        { id: 'ssl', path: '/ssl', label: 'SSL Nodes', icon: Shield },
-        { id: 'non-ssl', path: '/non-ssl', label: 'Non-SSL', icon: Server },
-        { id: 'submit', path: '/submit', label: 'Add Node', icon: Plus }
-    ];
+    useEffect(() => {
+        setMobileOpen(false);
+        setUserOpen(false);
+    }, [pathname]);
+
+    useEffect(() => {
+        const handlePointerDown = (event) => {
+            if (userRef.current && !userRef.current.contains(event.target)) {
+                setUserOpen(false);
+            }
+        };
+
+        document.addEventListener("pointerdown", handlePointerDown);
+        return () => document.removeEventListener("pointerdown", handlePointerDown);
+    }, []);
 
     return (
-        <nav className="sticky top-0 z-50 w-full bg-[#000000] border-b-2 border-[#27272a] text-[#f4f4f5] font-mono uppercase selection:bg-blue-500 selection:text-black">
-            <div className="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
+        <header className="sticky top-0 z-50 border-b border-line bg-ink-950/90 backdrop-blur-md">
+            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-6">
+                <Link href="/" className="flex shrink-0 items-center gap-3">
+                    <span className="grid h-9 w-9 place-items-center border border-signal/40 bg-signal/10 font-data text-xs font-semibold tracking-[0.08em] text-signal">
+                        LL
+                    </span>
+                    <span className="font-display text-base font-semibold tracking-tight text-white">
+                        Lavalink <span className="text-dim">Grid</span>
+                    </span>
+                </Link>
 
-                <div className="flex items-center gap-10">
-                    <Link href="/" className="flex items-center gap-4 group">
-                        <div className="w-12 h-12 bg-blue-500 text-black flex items-center justify-center font-black text-2xl group-hover:shadow-[4px_4px_0px_0px_#f4f4f5] transition-all border-2 border-transparent group-hover:border-white group-hover:-translate-y-1 group-hover:-translate-x-1">
-                            LL
-                        </div>
-                        <span className="font-black text-2xl tracking-widest text-white group-hover:text-blue-500 transition-colors hidden sm:block">
-                            Lavalink
-                        </span>
-                    </Link>
-
-                    <div className="hidden md:flex items-center gap-4">
-                        {navItems.map((item) => {
-                            const isActive = activeTab === item.id;
-                            return (
-                                <Link
-                                    key={item.id}
-                                    href={item.path}
-                                    className={`flex items-center gap-3 px-5 py-3 border-2 text-sm font-black tracking-widest transition-all ${isActive
-                                        ? 'bg-blue-500 border-blue-500 text-black shadow-[4px_4px_0px_0px_#f4f4f5] -translate-y-1 -translate-x-1'
-                                        : 'bg-[#09090b] border-[#27272a] text-[#a1a1aa] hover:border-white hover:text-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0px_0px_#3b82f6]'
-                                        }`}
-                                >
-                                    <item.icon size={18} /> {item.label}
-                                </Link>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:flex items-center gap-4">
-                        {session ? (
-                            <div className="relative">
-                                <button
-                                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                                    className="flex items-center gap-3 bg-[#09090b] border-2 border-[#27272a] hover:border-blue-500 px-4 py-2 transition-all shadow-[4px_4px_0px_0px_#27272a] hover:shadow-[4px_4px_0px_0px_#3b82f6] group"
-                                >
-                                    {session.user.image ? (
-                                        <img src={session.user.image} alt="User" className="w-8 h-8 rounded-none border border-[#27272a] group-hover:border-white" />
-                                    ) : (
-                                        <div className="w-8 h-8 bg-blue-500 flex items-center justify-center text-black">
-                                            <User size={16} />
-                                        </div>
-                                    )}
-                                    <span className="text-white text-xs font-black tracking-widest">{session.user.name?.toUpperCase()}</span>
-                                </button>
-
-                                {isUserMenuOpen && (
-                                    <div className="absolute right-0 mt-4 w-64 bg-[#09090b] border-4 border-[#27272a] p-2 shadow-[12px_12px_0px_0px_#000] animate-in fade-in zoom-in-95 duration-200">
-                                        <div className="p-4 border-b-2 border-[#27272a] mb-2">
-                                            <div className="text-[10px] text-[#52525b] font-black uppercase tracking-widest mb-1">Authenticated as</div>
-                                            <div className="text-white font-black uppercase truncate">{session.user.email}</div>
-                                        </div>
-                                        <Link
-                                            href={`/profile/${session.user.id}`}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-[#a1a1aa] hover:bg-blue-500/10 hover:text-blue-400 font-black uppercase tracking-widest text-xs transition-colors text-left"
-                                            onClick={() => setIsUserMenuOpen(false)}
-                                        >
-                                            <User size={16} /> View Profile
-                                        </Link>
-                                        <button
-                                            onClick={() => signOut()}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-black uppercase tracking-widest text-xs transition-colors text-left"
-                                        >
-                                            <LogOut size={16} /> Terminate Session
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => signIn('discord')}
-                                className="flex items-center gap-3 bg-blue-500 border-2 border-blue-500 text-black px-6 py-3 font-black text-xs tracking-widest uppercase transition-all shadow-[4px_4px_0px_0px_#f4f4f5] hover:bg-white hover:border-white hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_0px_#f4f4f5]"
-                            >
-                                <LogIn size={18} /> Initialize Login
-                            </button>
-                        )}
-                    </div>
-
-                    <button
-                        className="md:hidden p-3 bg-[#09090b] border-2 border-[#27272a] text-white hover:border-blue-500 transition-colors active:bg-blue-500 active:text-black"
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    >
-                        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
-                </div>
-            </div>
-
-            {isMobileMenuOpen && (
-                <div className="md:hidden border-t-2 border-[#27272a] bg-[#09090b] p-6 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
-                    {navItems.map((item) => {
-                        const isActive = activeTab === item.id;
+                <nav className="hidden items-center gap-7 lg:flex" aria-label="Primary">
+                    {NAV_ITEMS.map((item) => {
+                        const active = isActive(pathname, item.href);
                         return (
                             <Link
-                                key={item.id}
-                                href={item.path}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={`flex items-center gap-4 px-6 py-4 border-2 text-sm font-black tracking-widest transition-all ${isActive
-                                    ? 'bg-blue-500 border-blue-500 text-black shadow-[4px_4px_0px_0px_#f4f4f5]'
-                                    : 'bg-[#000000] border-[#27272a] text-[#a1a1aa] hover:border-white hover:text-white'
-                                    }`}
+                                key={item.href}
+                                href={item.href}
+                                aria-current={active ? "page" : undefined}
+                                className={`relative py-2 font-data text-[11px] uppercase tracking-[0.16em] transition-colors ${
+                                    active ? "text-white" : "text-dim hover:text-white"
+                                }`}
                             >
-                                <item.icon size={20} /> {item.label}
+                                {item.label}
+                                {active && (
+                                    <span className="absolute inset-x-0 -bottom-1 h-px bg-signal" />
+                                )}
                             </Link>
                         );
                     })}
+                </nav>
 
-                    <div className="pt-4 mt-4 border-t-2 border-[#27272a]">
-                        {session ? (
+                <div className="hidden items-center gap-2 lg:flex">
+                    <Link
+                        href="/submit"
+                        className="inline-flex h-9 items-center gap-1.5 border border-signal bg-signal px-3 font-data text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-950 transition-colors hover:bg-signal-soft"
+                    >
+                        <Plus size={13} />
+                        Add node
+                    </Link>
+
+                    {session ? (
+                        <div className="relative" ref={userRef}>
                             <button
-                                onClick={() => signOut()}
-                                className="w-full flex items-center gap-4 px-6 py-4 border-2 border-red-500/50 text-red-500 font-black uppercase tracking-widest text-sm transition-all hover:bg-red-500 hover:text-black"
+                                type="button"
+                                onClick={() => setUserOpen((value) => !value)}
+                                aria-expanded={userOpen}
+                                aria-haspopup="menu"
+                                className="inline-flex h-9 items-center gap-2 border border-line bg-ink-900 pl-1 pr-2.5 transition-colors hover:border-signal/40"
                             >
-                                <LogOut size={20} /> Terminate Session
+                                {session.user.image ? (
+                                    <img
+                                        src={session.user.image}
+                                        alt=""
+                                        className="h-7 w-7 border border-line object-cover"
+                                    />
+                                ) : (
+                                    <span className="grid h-7 w-7 place-items-center bg-signal/10 text-signal">
+                                        <User size={14} />
+                                    </span>
+                                )}
+                                <span className="max-w-[120px] truncate font-data text-[10px] uppercase tracking-[0.12em] text-white">
+                                    {session.user.name || "Account"}
+                                </span>
+                                <ChevronDown
+                                    size={12}
+                                    className={`text-dim transition-transform ${
+                                        userOpen ? "rotate-180" : ""
+                                    }`}
+                                />
                             </button>
-                        ) : (
-                            <button
-                                onClick={() => signIn('discord')}
-                                className="w-full flex items-center gap-4 px-6 py-4 border-2 border-blue-500 text-blue-500 font-black uppercase tracking-widest text-sm transition-all hover:bg-blue-500 hover:text-black"
+
+                            {userOpen && (
+                                <div
+                                    className="absolute right-0 top-[calc(100%+8px)] w-60 border border-line bg-ink-900 p-1.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)]"
+                                    role="menu"
+                                >
+                                    <div className="border-b border-line px-3 py-2.5">
+                                        <div className="font-data text-[9px] uppercase tracking-[0.14em] text-dim">
+                                            Signed in as
+                                        </div>
+                                        <div className="mt-1 truncate text-xs text-white">
+                                            {session.user.email}
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href={`/profile/${session.user.id}`}
+                                        role="menuitem"
+                                        className="mt-1 flex items-center gap-2 px-3 py-2 font-data text-[10px] uppercase tracking-[0.12em] text-dim transition-colors hover:bg-ink-950 hover:text-white"
+                                    >
+                                        <User size={13} />
+                                        View profile
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => signOut()}
+                                        role="menuitem"
+                                        className="flex w-full items-center gap-2 px-3 py-2 font-data text-[10px] uppercase tracking-[0.12em] text-bad transition-colors hover:bg-bad/10"
+                                    >
+                                        <LogOut size={13} />
+                                        Sign out
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => signIn("discord")}
+                            className="inline-flex h-9 items-center gap-1.5 border border-line bg-ink-900 px-3 font-data text-[10px] uppercase tracking-[0.12em] text-dim transition-colors hover:border-signal/40 hover:text-white"
+                        >
+                            <LogIn size={13} />
+                            Sign in
+                        </button>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    className="grid h-9 w-9 place-items-center border border-line bg-ink-900 text-white lg:hidden"
+                    onClick={() => setMobileOpen((value) => !value)}
+                    aria-expanded={mobileOpen}
+                    aria-label="Toggle navigation"
+                >
+                    {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+                </button>
+            </div>
+
+            {mobileOpen && (
+                <div className="border-t border-line bg-ink-900 lg:hidden">
+                    <nav className="mx-auto flex max-w-7xl flex-col px-4 py-3" aria-label="Mobile">
+                        {NAV_ITEMS.map((item) => {
+                            const active = isActive(pathname, item.href);
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`flex items-center justify-between px-3 py-3 font-data text-[11px] uppercase tracking-[0.14em] ${
+                                        active ? "text-signal" : "text-dim"
+                                    }`}
+                                >
+                                    {item.label}
+                                    {active && <span className="h-1 w-1 bg-signal" />}
+                                </Link>
+                            );
+                        })}
+
+                        <div className="mt-2 grid gap-2 border-t border-line pt-3">
+                            <Link
+                                href="/submit"
+                                className="inline-flex h-10 items-center justify-center gap-2 border border-signal bg-signal px-3 font-data text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-950"
                             >
-                                <LogIn size={20} /> Initialize Login
-                            </button>
-                        )}
-                    </div>
+                                <Plus size={13} />
+                                Add node
+                            </Link>
+
+                            {session ? (
+                                <button
+                                    type="button"
+                                    onClick={() => signOut()}
+                                    className="inline-flex h-10 items-center justify-center gap-2 border border-line px-3 font-data text-[10px] uppercase tracking-[0.12em] text-bad"
+                                >
+                                    <LogOut size={13} />
+                                    Sign out
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => signIn("discord")}
+                                    className="inline-flex h-10 items-center justify-center gap-2 border border-line px-3 font-data text-[10px] uppercase tracking-[0.12em] text-dim"
+                                >
+                                    <LogIn size={13} />
+                                    Sign in
+                                </button>
+                            )}
+                        </div>
+                    </nav>
                 </div>
             )}
-        </nav>
+        </header>
     );
 }
